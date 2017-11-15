@@ -1,0 +1,8 @@
+samples:
+  D1-W-49_S14_L001_R1_001: fastq/D1-W-49_S14_L001_R1_001.fastq
+  D2-A-71_S5_L004_R1_001: fastq/D2-A-71_S5_L004_R1_001.fastq
+  negD1-WC-40_S2_L003_R1_001: fastq/negD1-WC-40_S2_L003_R1_001.fastq
+
+index: "resources/mm10/genome"
+
+gtf: "resources/Mus_musculus.GRCm38.84.gtf"
