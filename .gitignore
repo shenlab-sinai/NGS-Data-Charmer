@@ -1,0 +1,5 @@
+.DS_Store
+.snakemake
+*.bam
+*.txt
+*.ht2
