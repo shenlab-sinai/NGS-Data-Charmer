@@ -6,3 +6,6 @@ samples:
 index: "resources/mm10/genome"
 
 gtf: "resources/Mus_musculus.GRCm38.84.gtf"
+
+alignment: 
+  threads: 2
