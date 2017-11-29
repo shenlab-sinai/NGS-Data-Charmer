@@ -1,3 +1,5 @@
+name: rnaseq_charmer
+
 channels:
   - conda-forge
   - bioconda

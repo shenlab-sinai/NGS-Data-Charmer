@@ -49,7 +49,8 @@ rule htseq_counts:
 
 rule counts_matrix:
 	input:
-		counts = expand("counts/{sample}.counts.txt", sample=config["samples"])
+		counts = expand("counts/{sample}.counts.txt", \
+						sample=config["samples"])
 	output:
 		matrix = "counts/htseq_counts_matrix.txt"
 	run:
@@ -57,20 +58,18 @@ rule counts_matrix:
 
 		dict_of_counts = {}
 
-		for f in input:
-			sample = f.split("/")[1].split(".")[0]
+		for file in input:
+			sample = file.split("/")[1].split(".")[0]
 			dict_of_counts[sample] = {}
 
-			with open(f, "r") as infile, \
-				open("logs/" + sample + ".htseq_counts.log", "a") as outfile:
+			with open(file, "r") as infile, \
+				open("logs/"+sample+".htseq_counts.log", "a") as outfile:
 				for lines in infile:
 					lines = lines.strip().split("\t")
 					if "__" not in lines[0]:
 						dict_of_counts[sample][lines[0]] = lines[1]
-
 					else:
 						outfile.write("\t".join(lines) + "\n")
 
 		dataframe = pd.DataFrame(dict_of_counts)
-
 		dataframe.to_csv(output[0], sep = '\t')
