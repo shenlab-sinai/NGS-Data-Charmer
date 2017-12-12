@@ -6,7 +6,7 @@ This repository hosts an automated RNA-seq pipeline created using Snakemake. The
 - [Anaconda](https://conda.io/docs/user-guide/install/linux.html) 
 
 ## Installation:
-Click on the 'Clone or download' icon, and copy the web URL. On your terminal, navigate to the directory where you would like to place this pipeline and type `git clone` followed by the copied URL. Change into the cloned RNAseq-Charmer directory. 
+Clone this repository onto your local desktop and change into the cloned RNAseq-Charmer directory. 
 
 To create an environment using the environment.yaml file, type the following:
 
