@@ -1,6 +1,8 @@
 .DS_Store
 .snakemake
+.Rhistory
 *.bam
 *.txt
 *.ht2
 *.log
+*.fastq
