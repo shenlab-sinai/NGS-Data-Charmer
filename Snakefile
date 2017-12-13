@@ -6,7 +6,7 @@ rule all:
 
 rule alignment:
 	input:
-		fastq = "fastq/{sample}.fastq"
+		fastq = "fastq/{sample}.fastq.gz"
 	params:
 		index = config["index"]
 	output:
