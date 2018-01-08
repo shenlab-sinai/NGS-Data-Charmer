@@ -40,7 +40,7 @@ rule htseq_counts:
 		sorted_bam = "sorted_bam/{sample}.sorted.bam",
 		gtf = config["gtf"]
 	output:
-		counts = temp("counts/{sample}.counts.txt")
+		counts = "counts/{sample}.counts.txt"
 	log:
 		"logs/{sample}.htseq_counts.log"
 	shell:
@@ -62,14 +62,11 @@ rule counts_matrix:
 			sample = file.split("/")[1].split(".")[0]
 			dict_of_counts[sample] = {}
 
-			with open(file, "r") as infile, \
-				open("logs/"+sample+".htseq_counts.log", "a") as outfile:
+			with open(file, "r") as infile:
 				for lines in infile:
 					lines = lines.strip().split("\t")
 					if "__" not in lines[0]:
 						dict_of_counts[sample][lines[0]] = lines[1]
-					else:
-						outfile.write("\t".join(lines) + "\n")
 
 		dataframe = pd.DataFrame(dict_of_counts)
 		dataframe.to_csv(output[0], sep = '\t')

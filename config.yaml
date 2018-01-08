@@ -3,9 +3,9 @@ samples:
   D2-A-71_S5_L004_R1_001: fastq/D2-A-71_S5_L004_R1_001.fastq
   negD1-WC-40_S2_L003_R1_001: fastq/negD1-WC-40_S2_L003_R1_001.fastq
 
-index: "/home/aarthi/resources/mm10_hisat2_index/genome"
+index: "/home/ramaka02/resources/hisat2_resources/mm10_90/hisat2_index/mm10"
 
-gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf"
+gtf: "/home/ramaka02/resources/hisat2_resources/mm10_90/Mus_musculus.GRCm38.90.gtf"
 
 alignment: 
   threads: 4
