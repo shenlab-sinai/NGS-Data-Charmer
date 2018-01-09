@@ -1,23 +1,40 @@
-configfile: "config.yaml"
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
+configfile: "config.yaml"
 
 rule all:
 	input:
 		"counts/htseq_counts_matrix.txt"
 
-rule alignment:
-	input:
-		fastq = "fastq/{sample}_R1_001.fastq.gz"
-	params:
-		index = config["index"]
-	output:
-		sam = temp("sorted_bam/{sample}.sam")
-	threads: config["alignment"]["threads"]
-	log:
-		"logs/{sample}.alignment.log"
-	shell:
-		"hisat2 -p {threads} -x {params.index} -U {input.fastq} "
-		"-S {output.sam} 2> {log}"
+if config["type"] == "single":
+	rule alignment:
+		input:
+			fastq = "fastq/{sample}_R1_001.fastq.gz"
+		params:
+			index = config["index"]
+		output:
+			sam = temp("sorted_bam/{sample}.sam")
+		threads: config["alignment"]["threads"]
+		log:
+			"logs/{sample}.alignment.log"
+		shell:
+			"hisat2 -p {threads} -x {params.index} -U {input.fastq} "
+			"-S {output.sam} 2> {log}"
+
+elif config["type"] == "paired":
+	rule alignment:
+		input:
+			pair1 = "fastq/{sample}_R1_001.fastq.gz",
+			pair2 = "fastq/{sample}_R2_001.fastq.gz"
+		params:
+			index = config["index"]
+		output:
+			sam = temp("sorted_bam/{sample}.sam")
+		threads: config["alignment"]["threads"]
+		log:
+			"logs/{sample}.alignment.log"
+		shell:
+			"hisat2 -p {threads} -x {params.index} -1 {input.pair1} "
+			"-2 {input.pair2} -S {output.sam} 2> {log}"
 
 rule sam_to_bam:
 	input:
