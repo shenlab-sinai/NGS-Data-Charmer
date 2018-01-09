@@ -1,7 +1,7 @@
 samples:
-  D1-W-49_S14_L001_R1_001: fastq/D1-W-49_S14_L001_R1_001.fastq
-  D2-A-71_S5_L004_R1_001: fastq/D2-A-71_S5_L004_R1_001.fastq
-  negD1-WC-40_S2_L003_R1_001: fastq/negD1-WC-40_S2_L003_R1_001.fastq
+  D1-W-49_S14_L001_R1_001: fastq/D1-W-49_S14_L001_R1_001.fastq.gz
+  D2-A-71_S5_L004_R1_001: fastq/D2-A-71_S5_L004_R1_001.fastq.gz
+  negD1-WC-40_S2_L003_R1_001: fastq/negD1-WC-40_S2_L003_R1_001.fastq.gz
 
 index: "/home/ramaka02/resources/hisat2_resources/mm10_90/hisat2_index/mm10"
 
