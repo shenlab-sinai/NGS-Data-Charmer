@@ -1,4 +1,5 @@
 configfile: "config.yaml"
+SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 
 rule all:
 	input:
@@ -6,7 +7,7 @@ rule all:
 
 rule alignment:
 	input:
-		fastq = "fastq/{sample}.fastq.gz"
+		fastq = "fastq/{sample}_R1_001.fastq.gz"
 	params:
 		index = config["index"]
 	output:
@@ -50,7 +51,7 @@ rule htseq_counts:
 rule counts_matrix:
 	input:
 		counts = expand("counts/{sample}.counts.txt", \
-						sample=config["samples"])
+						sample=SAMPLES)
 	output:
 		matrix = "counts/htseq_counts_matrix.txt"
 	run:
