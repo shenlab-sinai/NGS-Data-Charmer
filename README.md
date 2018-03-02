@@ -22,5 +22,5 @@ Next, to activate the environment 'rnaseq_charmer', type the following:
 
 `source activate rnaseq_charmer`
 
-Once the environment is activated, you are now ready to run the pipeline! Simply type `snakemake` or `nohup snakemake &` (to run in background). To access the additional options available for snakemake (setting the number of cores for instance), type `snakemake --help`.
+Once the environment is activated, you are now ready to run the pipeline! Simply type `snakemake --snakefile Snakefile` or `nohup snakemake --snakefile Snakefile &` (to run in background). To access the additional options available for snakemake (setting the number of cores for instance), type `snakemake --help`.
 
