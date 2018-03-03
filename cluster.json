@@ -1,0 +1,46 @@
+{
+    "__default__" :
+    {
+        "group"        : "manda",
+        "queue"     : "alloc",
+        "allocation": "acc_Nestlerlab",
+        "tasks"        : 1,
+        "memory"    : 12000,
+        "resources" : "\"rusage[mem=12000] span[hosts=1]\"",
+        "jobname"      : "{rule}.{wildcards}",
+        "output"    : "logs/{rule}.{wildcards}.o",
+        "error"     : "logs/{rule}.{wildcards}.e",
+        "walltime"    : "00:10"
+    },
+
+
+    "alignment" :
+    {
+        "walltime"    : "06:00"
+    },
+
+
+    "sam_to_bam":
+    {
+        "walltime"     : "02:00"
+    },
+
+
+    "sort_bam":
+    {
+        "walltime"    : "04:00"
+    },
+
+
+    "htseq_counts":
+    {
+        "walltime"    : "06:00"
+    },
+
+
+    "counts_matrix":
+    {
+        "walltime" : "00:10"
+    }
+
+}
