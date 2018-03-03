@@ -1,12 +1,12 @@
 # RNAseq-Charmer:
 
-This repository hosts an automated RNA-seq pipeline created using Snakemake. The pipeline currently runs on a local machine.
+This repository hosts an automated RNA-seq pipeline created using Snakemake. It can run on both cluster and a local machine.
 
 ## Dependency:
 - [Anaconda](https://conda.io/docs/user-guide/install/linux.html) 
 
 ## Installation:
-Clone this repository onto your local machine and change into the cloned RNAseq-Charmer directory. 
+Clone this repository and change into the cloned RNAseq-Charmer directory. 
 
 To create an environment using the environment.yaml file, type the following:
 
@@ -14,13 +14,24 @@ To create an environment using the environment.yaml file, type the following:
 
 This will create a conda environment called rnaseq_charmer.
 
-## Usage:
+## Usage on a local machine:
 
-Copy the config.yaml and Snakefile to your RNA-seq project directory. This directory should also contain a directory called 'fastq' wherein all the fastq files have been placed. Make the required changes to the config.yaml file. 
+Copy the config.yaml, run_snakemake.sh and Snakefile to your RNA-seq project directory. This directory should also contain a directory called 'fastq' wherein all the fastq files have been placed. Make the required changes to the config.yaml file. 
 
-Next, to activate the environment 'rnaseq_charmer', type the following:
+Next, simply type `sh run_snakemake.sh` or `nohup sh run_snakemake.sh &` (to run in background).
+
+## Usage on an LSF cluser:
+
+Copy the config.yaml, run_snakemake_cluster.sh, cluster.json and Snakefile to your RNA-seq project directory. Again, this directory should also contain a directory called 'fastq' wherein all fastq files are placed. Make the required changes to the config.yaml and cluster.json file.
+
+Next, simply type `nohup sh run_snakemake_cluster.sh &` (to run in background).
+ 
+## Additional Snakemake options:
+
+You can also customize the run_snakemake.sh and run_snakemake_cluster.sh according to your own needs. You might want to change the number of cores snakemake uses. Or you might want to do a dryrun. To access the additional options available in snakemake, type
 
 `source activate rnaseq_charmer`
 
-Once the environment is activated, you are now ready to run the pipeline! Simply type `snakemake --snakefile Snakefile` or `nohup snakemake --snakefile Snakefile &` (to run in background). To access the additional options available for snakemake (setting the number of cores for instance), type `snakemake --help`.
+followed by 
 
+`snakemake --help`
