@@ -18,13 +18,13 @@ This will create a conda environment called rnaseq_charmer.
 
 Copy the config.yaml, run_snakemake.sh and Snakefile to your RNA-seq project directory. This directory should also contain a directory called 'fastq' wherein all the fastq files have been placed. Make the required changes to the config.yaml file. 
 
-Next, simply type `sh run_snakemake.sh` or `nohup sh run_snakemake.sh &` (to run in background).
+Next, type `sh run_snakemake.sh` or `nohup sh run_snakemake.sh &` (to run in background).
 
 ## Usage on an LSF cluser:
 
 Copy the config.yaml, run_snakemake_cluster.sh, cluster.json and Snakefile to your RNA-seq project directory. Again, this directory should also contain a directory called 'fastq' wherein all fastq files are placed. Make the required changes to the config.yaml and cluster.json file.
 
-Next, simply type `nohup sh run_snakemake_cluster.sh &` (to run in background).
+Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
  
 ## Additional Snakemake options:
 
