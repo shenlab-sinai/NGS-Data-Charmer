@@ -1,8 +1,13 @@
+experiment: "chipseq" # chipseq or rnaseq
+
+type: "single" # single or paired
+
+alignment: 
+  threads: 4
+
+chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes"
+
 index: "/home/aarthi/resources/mm10_hisat2_index/genome"
 
 gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf"
 
-type: "single"
-
-alignment: 
-  threads: 4

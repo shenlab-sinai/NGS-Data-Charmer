@@ -1,18 +1,24 @@
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
-rule all:
-	input:
-		"counts/htseq_counts_matrix.txt"
+if config["experiment"] == "chipseq": # defining target
+	rule all:
+		input:
+			expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
 
-if config["type"] == "single":
-	rule alignment:
+elif config["experiment"] == "rnaseq":
+	rule all:
+		input:
+			"processed/htseq_counts_matrix.txt"
+
+if config["type"] == "single": # alignment
+	rule fastq_to_sam:
 		input:
 			fastq = "fastq/{sample}_R1_001.fastq.gz"
 		params:
 			index = config["index"]
 		output:
-			sam = temp("sorted_bam/{sample}.sam")
+			sam = temp("processed/{sample}.sam")
 		threads: config["alignment"]["threads"]
 		log:
 			"logs/{sample}.alignment.log"
@@ -21,14 +27,14 @@ if config["type"] == "single":
 			"-S {output.sam} 2> {log}"
 
 elif config["type"] == "paired":
-	rule alignment:
+	rule fastq_to_sam:
 		input:
 			pair1 = "fastq/{sample}_R1_001.fastq.gz",
 			pair2 = "fastq/{sample}_R2_001.fastq.gz"
 		params:
 			index = config["index"]
 		output:
-			sam = temp("sorted_bam/{sample}.sam")
+			sam = temp("processed/{sample}.sam")
 		threads: config["alignment"]["threads"]
 		log:
 			"logs/{sample}.alignment.log"
@@ -36,41 +42,83 @@ elif config["type"] == "paired":
 			"hisat2 -p {threads} -x {params.index} -1 {input.pair1} "
 			"-2 {input.pair2} -S {output.sam} 2> {log}"
 
-rule sam_to_bam:
+rule sam_to_unique: # chipseq
 	input:
-		sam = "sorted_bam/{sample}.sam"
+		sam = "processed/{sample}.sam"
 	output:
-		bam = temp("sorted_bam/{sample}.bam")
-	shell:
-		"samtools view -Sb {input.sam} > {output.bam}"
+		unique = temp("processed/{sample}.unique.sam")
+	run:
+		shell("grep -E 'NH:i:1|@' {input.sam} > {output.unique}")
 
-rule sort_bam:
+if config["experiment"] == "rnaseq":
+	rule sam_to_bam: # rnaseq
+		input:
+			sam = "processed/{sample}.sam"
+		output:
+			bam = temp("processed/{sample}.bam")
+		shell:
+			"samtools view -Sb {input.sam} > {output.bam}"
+
+elif config["experiment"] == "chipseq":
+	rule unique_to_bam: # chipseq
+		input:
+			sam = "processed/{sample}.unique.sam"
+		output:
+			bam = temp("processed/{sample}.bam")
+		shell:
+			"samtools view -Sb {input.sam} > {output.bam}"
+
+rule bam_to_sortedbam:
 	input:
-		bam = "sorted_bam/{sample}.bam"
+		bam = "processed/{sample}.bam"
 	output:
-		sorted_bam = "sorted_bam/{sample}.sorted.bam"
+		sorted_bam = "processed/{sample}.sorted.bam"
 	shell:
-		"samtools sort -T sorted_bam/{wildcards.sample} "
+		"samtools sort -T processed/{wildcards.sample} "
 		"-O bam {input.bam} > {output.sorted_bam}"
 
-rule htseq_counts:
+rule sortedbam_to_rmdup: # chipseq
 	input:
-		sorted_bam = "sorted_bam/{sample}.sorted.bam",
+		sorted_bam = "processed/{sample}.sorted.bam"
+	output:
+		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+	log:
+		"logs/{sample}.rmdup.log"
+	run:
+		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
+		shell("rm {input.sorted_bam}")
+
+rule rmdup_to_tdf: # chipseq
+	input:
+		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+	params:
+		chr_sizes = config["chr_sizes"]
+	output:
+		tdf = "processed/{sample}.unique.sorted.rmdup.tdf"
+	log:
+		"logs/{sample}.tdf.log"
+	shell:
+		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
+		"2> {log}"
+
+rule sortedbam_to_counts: # rnaseq
+	input:
+		sorted_bam = "processed/{sample}.sorted.bam",
 		gtf = config["gtf"]
 	output:
-		counts = "counts/{sample}.counts.txt"
+		counts = "processed/{sample}.counts.txt"
 	log:
 		"logs/{sample}.htseq_counts.log"
 	shell:
 		"htseq-count -f bam -s no {input.sorted_bam} "
 		"{input.gtf} > {output.counts} 2> {log}"
 
-rule counts_matrix:
+rule counts_matrix: # rnaseq
 	input:
-		counts = expand("counts/{sample}.counts.txt", \
+		counts = expand("processed/{sample}.counts.txt", \
 						sample=SAMPLES)
 	output:
-		matrix = "counts/htseq_counts_matrix.txt"
+		matrix = "processed/htseq_counts_matrix.txt"
 	run:
 		import pandas as pd
 

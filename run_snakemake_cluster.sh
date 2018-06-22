@@ -1,4 +1,4 @@
-source activate rnaseq_charmer
+source activate ngs_data_charmer
 
 snakemake --snakefile Snakefile \
     -j 499 \

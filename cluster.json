@@ -13,30 +13,45 @@
         "walltime"    : "00:10"
     },
 
-
-    "alignment" :
+    "fastq_to_sam" :
     {
         "walltime"    : "06:00"
     },
 
+    "sam_to_unique":
+    {
+        "walltime"     : "01:00"
+    },
 
     "sam_to_bam":
     {
-        "walltime"     : "02:00"
+        "walltime"    : "02:00"
     },
 
+    "unique_to_bam":
+    {
+        "walltime"    : "02:00"
+    },
 
-    "sort_bam":
+    "bam_to_sortedbam":
+    {
+        "walltime" : "06:00"
+    },
+
+    "sortedbam_to_rmdup":
     {
         "walltime"    : "04:00"
     },
 
+    "rmdup_to_tdf":
+    {
+        "walltime"    : "02:00"
+    },
 
-    "htseq_counts":
+    "sortedbam_to_counts":
     {
         "walltime"    : "06:00"
     },
-
 
     "counts_matrix":
     {

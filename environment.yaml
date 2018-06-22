@@ -1,4 +1,4 @@
-name: rnaseq_charmer
+name: ngs_data_charmer
 
 channels:
   - conda-forge
@@ -15,4 +15,5 @@ dependencies:
   - htseq=0.9.1
   - pysam=0.13.0
   - pandas=0.21.0
+  - igvtools=2.3.93
 
