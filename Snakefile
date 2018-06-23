@@ -1,10 +1,12 @@
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
+ALL_TDF = expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
+ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.bed', sample=SAMPLES)
+
 if config["experiment"] == "chipseq": # defining target
 	rule all:
-		input:
-			expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
+		input: ALL_BED + ALL_TDF
 
 elif config["experiment"] == "rnaseq":
 	rule all:
@@ -100,6 +102,16 @@ rule rmdup_to_tdf: # chipseq
 	shell:
 		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
 		"2> {log}"
+
+rule rmdup_to_bed: # chipseq
+	input:
+		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+	output:
+		bed = "processed/{sample}.unique.sorted.rmdup.bed"
+	log:
+		"logs/{sample}.bed.log"
+	shell:
+		"bedtools bamtobed -i {input.dup_removed} > {output.bed} 2> {log}"
 
 rule sortedbam_to_counts: # rnaseq
 	input:
