@@ -79,7 +79,9 @@ rule bam_to_sortedbam:
 		"samtools sort -T processed/{wildcards.sample} "
 		"-O bam {input.bam} > {output.sorted_bam}"
 
-rule sortedbam_to_rmdup: # chipseq
+# chipseq 
+
+rule sortedbam_to_rmdup:
 	input:
 		sorted_bam = "processed/{sample}.sorted.bam"
 	output:
@@ -90,7 +92,7 @@ rule sortedbam_to_rmdup: # chipseq
 		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
 		shell("rm {input.sorted_bam}")
 
-rule rmdup_to_tdf: # chipseq
+rule rmdup_to_tdf:
 	input:
 		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
 	params:
@@ -103,19 +105,19 @@ rule rmdup_to_tdf: # chipseq
 		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
 		"2> {log}"
 
-rule rmdup_to_chrbam: # chipseq
+rule rmdup_to_chrbam:
 	input:
 		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
 	params:
 		sam_chr_header = config["sam_chr_header"]
 	output:
-		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+		chrbam = temp("processed/{sample}.unique.sorted.rmdup.chr.bam")
 	log:
 		"logs/{sample}.chrbam.log"
 	shell:
 		"samtools reheader {params.sam_chr_header} {input.dup_removed} > {output.chrbam}"
 
-rule chrbam_to_bed: # chipseq
+rule chrbam_to_bed:
 	input:
 		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
@@ -125,7 +127,9 @@ rule chrbam_to_bed: # chipseq
 	shell:
 		"bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
-rule sortedbam_to_counts: # rnaseq
+# rnaseq
+
+rule sortedbam_to_counts:
 	input:
 		sorted_bam = "processed/{sample}.sorted.bam",
 		gtf = config["gtf"]
@@ -137,7 +141,7 @@ rule sortedbam_to_counts: # rnaseq
 		"htseq-count -f bam -s no {input.sorted_bam} "
 		"{input.gtf} > {output.counts} 2> {log}"
 
-rule counts_matrix: # rnaseq
+rule counts_matrix:
 	input:
 		counts = expand("processed/{sample}.counts.txt", \
 						sample=SAMPLES)
