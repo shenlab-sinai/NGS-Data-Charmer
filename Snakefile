@@ -2,7 +2,7 @@ SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
 ALL_TDF = expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
-ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.bed', sample=SAMPLES)
+ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
 if config["experiment"] == "chipseq": # defining target
 	rule all:
@@ -103,15 +103,27 @@ rule rmdup_to_tdf: # chipseq
 		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
 		"2> {log}"
 
-rule rmdup_to_bed: # chipseq
+rule rmdup_to_chrbam: # chipseq
 	input:
 		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+	params:
+		sam_chr_header = config["sam_chr_header"]
 	output:
-		bed = "processed/{sample}.unique.sorted.rmdup.bed"
+		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+	log:
+		"logs/{sample}.chrbam.log"
+	shell:
+		"samtools reheader {params.sam_chr_header} {input.dup_removed} > {output.chrbam}"
+
+rule chrbam_to_bed: # chipseq
+	input:
+		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+	output:
+		bed = "processed/{sample}.unique.sorted.rmdup.chr.bed"
 	log:
 		"logs/{sample}.bed.log"
 	shell:
-		"bedtools bamtobed -i {input.dup_removed} > {output.bed} 2> {log}"
+		"bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
 rule sortedbam_to_counts: # rnaseq
 	input:

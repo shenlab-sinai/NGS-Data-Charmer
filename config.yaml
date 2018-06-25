@@ -7,6 +7,8 @@ alignment:
 
 chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes"
 
+sam_chr_header: "/home/aarthi/resources/header_mm10_90_chr.sam"
+
 index: "/home/aarthi/resources/mm10_hisat2_index/genome"
 
 gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf"
