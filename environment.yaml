@@ -16,4 +16,5 @@ dependencies:
   - pysam=0.13.0
   - pandas=0.21.0
   - igvtools=2.3.93
+  - bedtools=2.27.1
 
