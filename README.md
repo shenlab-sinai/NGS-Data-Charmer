@@ -1,6 +1,6 @@
 # NGS-Data-Charmer:
 
-This repository hosts an automated NGS data analysis pipeline (ChIp-seq and RNA-seq) created using Snakemake. 
+This repository hosts an automated NGS data analysis pipeline (ChIP-seq and RNA-seq) created using Snakemake. 
 
 ## Dependency:
 - [Anaconda](https://conda.io/docs/user-guide/install/linux.html) 
