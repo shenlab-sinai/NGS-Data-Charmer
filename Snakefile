@@ -49,7 +49,7 @@ elif config["type"] == "paired":
 		log:
 			"logs/{sample}.trim_adapters.log"
 		run:
-			shell("trim_galore {input.trimmed_pair1} {input.trimmed_pair2} --paired -o ./processed")
+			shell("trim_galore {input.pair1} {input.pair2} --paired -o ./processed")
 
 	rule fastq_to_sam:
 		input:
