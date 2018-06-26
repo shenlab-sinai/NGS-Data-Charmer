@@ -23,12 +23,7 @@
         "walltime"     : "01:00"
     },
 
-    "sam_to_bam":
-    {
-        "walltime"    : "02:00"
-    },
-
-    "unique_to_bam":
+    "sam_unique_to_bam":
     {
         "walltime"    : "02:00"
     },
@@ -44,6 +39,16 @@
     },
 
     "rmdup_to_tdf":
+    {
+        "walltime"    : "02:00"
+    },
+
+    "rmdup_to_chrbam":
+    {
+        "walltime"    : "02:00"
+    },
+
+    "chrbam_to_bed":
     {
         "walltime"    : "02:00"
     },

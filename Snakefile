@@ -52,23 +52,13 @@ rule sam_to_unique: # chipseq
 	run:
 		shell("grep -E 'NH:i:1|@' {input.sam} > {output.unique}")
 
-if config["experiment"] == "rnaseq":
-	rule sam_to_bam: # rnaseq
-		input:
-			sam = "processed/{sample}.sam"
-		output:
-			bam = temp("processed/{sample}.bam")
-		shell:
-			"samtools view -Sb {input.sam} > {output.bam}"
-
-elif config["experiment"] == "chipseq":
-	rule unique_to_bam: # chipseq
-		input:
-			sam = "processed/{sample}.unique.sam"
-		output:
-			bam = temp("processed/{sample}.bam")
-		shell:
-			"samtools view -Sb {input.sam} > {output.bam}"
+rule sam_unique_to_bam:
+	input:
+		sam = "processed/{sample}.sam" if config["experiment"] == "rnaseq" else "processed/{sample}.unique.sam"
+	output:
+		bam = temp("processed/{sample}.bam")
+	shell:
+		"samtools view -Sb {input.sam} > {output.bam}"
 
 rule bam_to_sortedbam:
 	input:
