@@ -17,4 +17,4 @@ dependencies:
   - pandas=0.21.0
   - igvtools=2.3.93
   - bedtools=2.27.1
-
+  - trim-galore=0.4.5

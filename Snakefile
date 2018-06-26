@@ -14,9 +14,19 @@ elif config["experiment"] == "rnaseq":
 			"processed/htseq_counts_matrix.txt"
 
 if config["type"] == "single": # alignment
-	rule fastq_to_sam:
+	rule trim_fastq:
 		input:
 			fastq = "fastq/{sample}_R1_001.fastq.gz"
+		output:
+			trimmed_fastq = temp("processed/{sample}_R1_001_trimmed.fq.gz")
+		log:
+			"logs/{sample}.trim_adapters.log"
+		run:
+			shell("trim_galore {input.fastq} -o ./processed")
+
+	rule fastq_to_sam:
+		input:
+			trimmed_fastq = "processed/{sample}_R1_001_trimmed.fq.gz"
 		params:
 			index = config["index"]
 		output:
@@ -25,14 +35,26 @@ if config["type"] == "single": # alignment
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
-			"hisat2 -p {threads} -x {params.index} -U {input.fastq} "
+			"hisat2 -p {threads} -x {params.index} -U {input.trimmed_fastq} "
 			"-S {output.sam} 2> {log}"
 
 elif config["type"] == "paired":
-	rule fastq_to_sam:
+	rule trim_fastq:
 		input:
 			pair1 = "fastq/{sample}_R1_001.fastq.gz",
 			pair2 = "fastq/{sample}_R2_001.fastq.gz"
+		output:
+			trimmed_pair1 = temp("processed/{sample}_R1_001_val_1.fq.gz"),
+			trimmed_pair2 = temp("processed/{sample}_R2_001_val_2.fq.gz")
+		log:
+			"logs/{sample}.trim_adapters.log"
+		run:
+			shell("trim_galore {input.trimmed_pair1} {input.trimmed_pair2} --paired -o ./processed")
+
+	rule fastq_to_sam:
+		input:
+			trimmed_pair1 = "processed/{sample}_R1_001_val_1.fq.gz",
+			trimmed_pair2 = "processed/{sample}_R2_001_val_2.fq.gz"
 		params:
 			index = config["index"]
 		output:
@@ -41,8 +63,8 @@ elif config["type"] == "paired":
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
-			"hisat2 -p {threads} -x {params.index} -1 {input.pair1} "
-			"-2 {input.pair2} -S {output.sam} 2> {log}"
+			"hisat2 -p {threads} -x {params.index} -1 {input.trimmed_pair1} "
+			"-2 {input.trimmed_pair2} -S {output.sam} 2> {log}"
 
 rule sam_to_unique: # chipseq
 	input:
