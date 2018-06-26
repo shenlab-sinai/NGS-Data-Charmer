@@ -4,25 +4,29 @@ configfile: "config.yaml"
 ALL_TDF = expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
 ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
+COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
+MULTIQC_REPORT = "multiqc_report.html"
+
 if config["experiment"] == "chipseq": # defining target
 	rule all:
-		input: ALL_BED + ALL_TDF
+		input: ALL_BED, ALL_TDF, MULTIQC_REPORT
 
 elif config["experiment"] == "rnaseq":
 	rule all:
-		input:
-			"processed/htseq_counts_matrix.txt"
+		input: COUNTS_MATRIX, MULTIQC_REPORT
 
 if config["type"] == "single": # alignment
-	rule trim_fastq:
+	rule trim_fastq_fastqc:
 		input:
 			fastq = "fastq/{sample}_R1_001.fastq.gz"
 		output:
-			trimmed_fastq = temp("processed/{sample}_R1_001_trimmed.fq.gz")
+			trimmed_fastq = temp("processed/{sample}_R1_001_trimmed.fq.gz"),
+			fastqc_zipfile = "fastqc/{sample}_R1_001_fastqc.zip"
 		log:
 			"logs/{sample}.trim_adapters.log"
 		run:
 			shell("trim_galore {input.fastq} -o ./processed")
+			shell("fastqc {input.fastq} -o ./fastqc")
 
 	rule fastq_to_sam:
 		input:
@@ -39,17 +43,20 @@ if config["type"] == "single": # alignment
 			"-S {output.sam} 2> {log}"
 
 elif config["type"] == "paired":
-	rule trim_fastq:
+	rule trim_fastq_fastqc:
 		input:
 			pair1 = "fastq/{sample}_R1_001.fastq.gz",
 			pair2 = "fastq/{sample}_R2_001.fastq.gz"
 		output:
 			trimmed_pair1 = temp("processed/{sample}_R1_001_val_1.fq.gz"),
-			trimmed_pair2 = temp("processed/{sample}_R2_001_val_2.fq.gz")
+			trimmed_pair2 = temp("processed/{sample}_R2_001_val_2.fq.gz"),
+			fastqc_zipfile1 = "fastqc/{sample}_R1_001_fastqc.zip",
+			fastqc_zipfile2 = "fastqc/{sample}_R2_001_fastqc.zip"
 		log:
 			"logs/{sample}.trim_adapters.log"
 		run:
 			shell("trim_galore {input.pair1} {input.pair2} --paired -o ./processed")
+			shell("fastqc {input.pair1} {input.pair2} -o ./fastqc")
 
 	rule fastq_to_sam:
 		input:
@@ -176,3 +183,11 @@ rule counts_matrix:
 
 		dataframe = pd.DataFrame(dict_of_counts)
 		dataframe.to_csv(output[0], sep = '\t')
+
+rule run_multiqc:
+	output:
+		multiqc_report = "multiqc_report.html"
+	params:
+		multiqc_config = config["multiqc_yaml"]
+	shell:
+		"multiqc . --config {params.multiqc_config}"
