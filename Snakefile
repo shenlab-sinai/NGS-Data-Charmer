@@ -184,6 +184,8 @@ rule counts_matrix:
 		dataframe = pd.DataFrame(dict_of_counts)
 		dataframe.to_csv(output[0], sep = '\t')
 
+# multiqc
+
 rule run_multiqc:
 	output:
 		multiqc_report = "multiqc_report.html"
