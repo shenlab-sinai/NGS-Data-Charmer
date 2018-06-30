@@ -49,11 +49,11 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 ## Steps in RNA-seq pipeline:
 
- ![dag-rnaseq](dag_rnaseq.pdf)
+ ![ScreenShot](dag_rnaseq.pdf)
 
 ## Steps in ChIP-seq pipeline:
 
- ![dag-chipseq](dag_chipseq.pdf)
+ ![ScreenShot](dag_chipseq.pdf)
 
 ## Additional Snakemake options:
 
