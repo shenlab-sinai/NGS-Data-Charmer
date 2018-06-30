@@ -47,6 +47,14 @@ Make the required changes to the config.yaml and cluster.json file.
 
 Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
+## Steps in RNA-seq pipeline:
+
+https://raw.githubusercontent.com/aartrama/NGS-Data-Charmer/master/dag_rnaseq.pdf
+
+## Steps in ChIP-seq pipeline:
+
+https://raw.githubusercontent.com/aartrama/NGS-Data-Charmer/master/dag_chipseq.pdf
+
 ## Additional Snakemake options:
 
 You can also customize the run_snakemake.sh and run_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
