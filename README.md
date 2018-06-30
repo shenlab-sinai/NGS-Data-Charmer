@@ -59,7 +59,7 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 You can also customize the run_snakemake.sh and run_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
 
-`source activate rnaseq_charmer`
+`source activate ngs_data_charmer`
 
 followed by 
 
