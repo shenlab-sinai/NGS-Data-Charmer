@@ -53,7 +53,7 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 ## Steps in ChIP-seq pipeline:
 
- ![ScreenShot](dag_chipseq.pdf)
+ ![ScreenShot](dag_chipseq.png)
 
 ## Additional Snakemake options:
 
