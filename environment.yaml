@@ -13,8 +13,9 @@ dependencies:
   - hisat2=2.1.0
   - perl=5.22.0.1
   - htseq=0.9.1
-  - pysam=0.13.0
+  - pysam=0.14.1
   - pandas=0.21.0
   - igvtools=2.3.93
   - bedtools=2.27.1
   - trim-galore=0.4.5
+  - deeptools=3.1.0
