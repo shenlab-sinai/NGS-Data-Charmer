@@ -185,11 +185,27 @@ rule counts_matrix:
 		dataframe.to_csv(output[0], sep = '\t')
 
 # multiqc
+if config["experiment"] == "rnaseq":
+	rule run_multiqc:
+		input:
+			matrix = "processed/htseq_counts_matrix.txt"
+		output:
+			multiqc_report = "multiqc_report.html"
+		params:
+			multiqc_config = config["multiqc_yaml"]
+		shell:
+			"multiqc . --config {params.multiqc_config}"
 
-rule run_multiqc:
-	output:
-		multiqc_report = "multiqc_report.html"
-	params:
-		multiqc_config = config["multiqc_yaml"]
-	shell:
-		"multiqc . --config {params.multiqc_config}"
+elif config["experiment"] == "chipseq":
+	rule run_multiqc:
+		input:
+			tdf = expand("processed/{sample}.unique.sorted.rmdup.tdf", \
+						sample = SAMPLES)
+		output:
+			multiqc_report = "multiqc_report.html"
+		params:
+			multiqc_config = config["multiqc_yaml"]
+		shell:
+			"multiqc . --config {params.multiqc_config}"
+			
+			
