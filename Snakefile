@@ -21,7 +21,7 @@ if config["type"] == "single": # alignment
 		input:
 			fastq = "fastq/{sample}_R1_001.fastq.gz"
 		output:
-			trimmed_fastq = temp("processed/{sample}_R1_001_trimmed.fq.gz"),
+			trimmed_fastq = temp("logs/{sample}_R1_001_trimmed.fq.gz"),
 			fastqc_zipfile = "fastqc/{sample}_R1_001_fastqc.zip"
 		log:
 			"logs/{sample}.trim_adapters.log"
@@ -31,7 +31,7 @@ if config["type"] == "single": # alignment
 
 	rule fastq_to_sam:
 		input:
-			trimmed_fastq = "processed/{sample}_R1_001_trimmed.fq.gz"
+			trimmed_fastq = "logs/{sample}_R1_001_trimmed.fq.gz"
 		params:
 			index = config["index"]
 		output:
@@ -49,8 +49,8 @@ elif config["type"] == "paired":
 			pair1 = "fastq/{sample}_R1_001.fastq.gz",
 			pair2 = "fastq/{sample}_R2_001.fastq.gz"
 		output:
-			trimmed_pair1 = temp("processed/{sample}_R1_001_val_1.fq.gz"),
-			trimmed_pair2 = temp("processed/{sample}_R2_001_val_2.fq.gz"),
+			trimmed_pair1 = temp("logs/{sample}_R1_001_val_1.fq.gz"),
+			trimmed_pair2 = temp("logs/{sample}_R2_001_val_2.fq.gz"),
 			fastqc_zipfile1 = "fastqc/{sample}_R1_001_fastqc.zip",
 			fastqc_zipfile2 = "fastqc/{sample}_R2_001_fastqc.zip"
 		log:
@@ -61,8 +61,8 @@ elif config["type"] == "paired":
 
 	rule fastq_to_sam:
 		input:
-			trimmed_pair1 = "processed/{sample}_R1_001_val_1.fq.gz",
-			trimmed_pair2 = "processed/{sample}_R2_001_val_2.fq.gz"
+			trimmed_pair1 = "logs/{sample}_R1_001_val_1.fq.gz",
+			trimmed_pair2 = "logs/{sample}_R2_001_val_2.fq.gz"
 		params:
 			index = config["index"]
 		output:
@@ -137,16 +137,6 @@ rule rmdup_to_chrbam:
 	shell:
 		"samtools reheader {params.sam_chr_header} {input.dup_removed} > {output.chrbam}"
 
-rule chrbam_to_indexedbam:
-	input:
-		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
-	output:
-		indexed_bam = "processed/{sample}.unique.sorted.rmdup.chr.bam.bai"
-	log:
-		"logs/{sample}.index.log"
-	shell:
-		"samtools index {input.chrbam}"
-
 rule chrbam_to_bw:
 	input:
 		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
@@ -154,8 +144,9 @@ rule chrbam_to_bw:
 		bw_file = "processed/{sample}.unique.sorted.rmdup.chr.bw"
 	log:
 		"logs/{sample}.bw.log"
-	shell:
-		"bamCoverage -b {input.chrbam} -o {output.bw_file} --binSize 10 --normalizeUsingRPKM"
+	run:
+		shell("samtools index {input.chrbam}")
+		shell("bamCoverage -b {input.chrbam} -o {output.bw_file} --binSize 10 --normalizeUsing RPKM")
 
 rule chrbam_to_bed:
 	input:
