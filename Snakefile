@@ -2,6 +2,7 @@ SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
 ALL_TDF = expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
+ALL_BW = expand('processed/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
 ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
@@ -9,7 +10,7 @@ MULTIQC_REPORT = "multiqc_report.html"
 
 if config["experiment"] == "chipseq": # defining target
 	rule all:
-		input: ALL_BED, ALL_TDF, MULTIQC_REPORT
+		input: ALL_BED, ALL_TDF, ALL_BW, MULTIQC_REPORT
 
 elif config["experiment"] == "rnaseq":
 	rule all:
@@ -135,6 +136,26 @@ rule rmdup_to_chrbam:
 		"logs/{sample}.chrbam.log"
 	shell:
 		"samtools reheader {params.sam_chr_header} {input.dup_removed} > {output.chrbam}"
+
+rule chrbam_to_indexedbam:
+	input:
+		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+	output:
+		indexed_bam = "processed/{sample}.unique.sorted.rmdup.chr.bam.bai"
+	log:
+		"logs/{sample}.index.log"
+	shell:
+		"samtools index {input.chrbam}"
+
+rule chrbam_to_bw:
+	input:
+		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+	output:
+		bw_file = "processed/{sample}.unique.sorted.rmdup.chr.bw"
+	log:
+		"logs/{sample}.bw.log"
+	shell:
+		"bamCoverage -b {input.chrbam} -o {output.bw_file} --binSize 10 --normalizeUsingRPKM"
 
 rule chrbam_to_bed:
 	input:
