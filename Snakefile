@@ -56,7 +56,7 @@ elif config["type"] == "paired":
 		log:
 			"logs/{sample}.trim_adapters.log"
 		run:
-			shell("trim_galore {input.pair1} {input.pair2} --paired -o ./processed")
+			shell("trim_galore {input.pair1} {input.pair2} --paired -o ./logs")
 			shell("fastqc {input.pair1} {input.pair2} -o ./fastqc")
 
 	rule fastq_to_sam:
@@ -110,7 +110,7 @@ rule sortedbam_to_rmdup:
 		"logs/{sample}.rmdup.log"
 	run:
 		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
-		shell("rm {input.sorted_bam}")
+		shell("rm -f {input.sorted_bam}")
 
 rule rmdup_to_tdf:
 	input:

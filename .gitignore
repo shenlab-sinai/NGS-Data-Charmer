@@ -9,4 +9,8 @@
 processed
 fastqc
 logs
-
+nohup.out
+bed
+multiqc_data
+multiqc_report.html
+tdf
