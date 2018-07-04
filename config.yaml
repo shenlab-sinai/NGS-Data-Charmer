@@ -1,4 +1,4 @@
-type: "paired" # single or paired
+type: "single" # single or paired
 
 experiment: "chipseq" # chipseq or rnaseq
 

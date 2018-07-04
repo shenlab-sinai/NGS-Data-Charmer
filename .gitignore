@@ -7,3 +7,6 @@
 *.log
 *.fastq.gz
 processed
+fastqc
+logs
+

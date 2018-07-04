@@ -1,9 +1,9 @@
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
-ALL_TDF = expand('processed/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
-ALL_BW = expand('processed/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
-ALL_BED = expand('processed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
+ALL_TDF = expand('tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
+ALL_BW = expand('bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
+ALL_BED = expand('bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
 MULTIQC_REPORT = "multiqc_report.html"
@@ -26,7 +26,7 @@ if config["type"] == "single": # alignment
 		log:
 			"logs/{sample}.trim_adapters.log"
 		run:
-			shell("trim_galore {input.fastq} -o ./processed")
+			shell("trim_galore {input.fastq} -o ./logs")
 			shell("fastqc {input.fastq} -o ./fastqc")
 
 	rule fastq_to_sam:
@@ -118,7 +118,7 @@ rule rmdup_to_tdf:
 	params:
 		chr_sizes = config["chr_sizes"]
 	output:
-		tdf = "processed/{sample}.unique.sorted.rmdup.tdf"
+		tdf = "tdf/{sample}.unique.sorted.rmdup.tdf"
 	log:
 		"logs/{sample}.tdf.log"
 	shell:
@@ -141,7 +141,7 @@ rule chrbam_to_bw:
 	input:
 		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
-		bw_file = "processed/{sample}.unique.sorted.rmdup.chr.bw"
+		bw_file = "bw/{sample}.unique.sorted.rmdup.chr.bw"
 	log:
 		"logs/{sample}.bw.log"
 	run:
@@ -152,7 +152,7 @@ rule chrbam_to_bed:
 	input:
 		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
-		bed = "processed/{sample}.unique.sorted.rmdup.chr.bed"
+		bed = "bed/{sample}.unique.sorted.rmdup.chr.bed"
 	log:
 		"logs/{sample}.bed.log"
 	shell:
@@ -211,7 +211,7 @@ if config["experiment"] == "rnaseq":
 elif config["experiment"] == "chipseq":
 	rule run_multiqc:
 		input:
-			tdf = expand("processed/{sample}.unique.sorted.rmdup.tdf", \
+			tdf = expand("tdf/{sample}.unique.sorted.rmdup.tdf", \
 						sample = SAMPLES)
 		output:
 			multiqc_report = "multiqc_report.html"
