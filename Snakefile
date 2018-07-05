@@ -206,7 +206,7 @@ if config["experiment"] == "rnaseq":
 		params:
 			multiqc_config = config["multiqc_yaml"]
 		shell:
-			"multiqc . --config {params.multiqc_config}"
+			"multiqc . -f --config {params.multiqc_config}"
 
 elif config["experiment"] == "chipseq":
 	rule run_multiqc:
@@ -218,6 +218,6 @@ elif config["experiment"] == "chipseq":
 		params:
 			multiqc_config = config["multiqc_yaml"]
 		shell:
-			"multiqc . --config {params.multiqc_config}"
+			"multiqc . -f --config {params.multiqc_config}"
 			
 			
