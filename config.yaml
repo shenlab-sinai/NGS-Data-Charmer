@@ -1,19 +1,27 @@
+# REQUIRED ARGUMENTS -
+
 type: "single" # single or paired
 
-experiment: "chipseq" # chipseq or rnaseq
+experiment: "rnaseq" # chipseq or rnaseq
 
-alignment: 
-  threads: 4
+threads_for_alignment: 2
 
-multiqc_yaml: "/home/aarthi/resources/multiqc_config_example.yaml"
+index: "/home/aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 
-index: "/Users/Aarthi 1/Desktop/RNAseq-Charmer/mm10_hisat2_index/genome"
+multiqc_yaml: "/home/aarthi/resources/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
-# only for rnaseq
-gtf: "/Users/Aarthi 1/Desktop/RNAseq-Charmer/Mus_musculus.GRCm38.84.gtf"
 
-# only for chipseq
-chr_sizes: "/Users/Aarthi 1/Desktop/RNAseq-Charmer/mm10.chrom.sizes"
+
+# ONLY FOR RNASEQ -
+
+gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
+
+
+
+# ONLY FOR CHIPSEQ -
+
+chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
+
 sam_chr_header: "/home/aarthi/resources/header_mm10_90_chr.sam"
 
 

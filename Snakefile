@@ -36,7 +36,7 @@ if config["type"] == "single": # alignment
 			index = config["index"]
 		output:
 			sam = temp("processed/{sample}.sam")
-		threads: config["alignment"]["threads"]
+		threads: config["threads_for_alignment"]
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
@@ -67,7 +67,7 @@ elif config["type"] == "paired":
 			index = config["index"]
 		output:
 			sam = temp("processed/{sample}.sam")
-		threads: config["alignment"]["threads"]
+		threads: config["threads_for_alignment"]
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
