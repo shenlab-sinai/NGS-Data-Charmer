@@ -131,7 +131,7 @@ rule rmdup_to_chrbam:
 	params:
 		sam_chr_header = config["sam_chr_header"]
 	output:
-		chrbam = temp("processed/{sample}.unique.sorted.rmdup.chr.bam")
+		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
 	log:
 		"logs/{sample}.chrbam.log"
 	shell:
