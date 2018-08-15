@@ -20,12 +20,13 @@
 
     "fastq_to_sam" :
     {
+        "memory"    : 24000,
         "walltime"    : "06:00"
     },
 
     "sam_to_unique":
     {
-        "walltime"     : "01:00"
+        "walltime"     : "02:00"
     },
 
     "sam_unique_to_bam":
@@ -35,6 +36,7 @@
 
     "bam_to_sortedbam":
     {
+        "memory"    : 24000,
         "walltime" : "06:00"
     },
 
@@ -50,6 +52,12 @@
 
     "rmdup_to_chrbam":
     {
+        "walltime"    : "02:00"
+    },
+
+    "chrbam_to_bw":
+    {
+        "memory"    : 24000,
         "walltime"    : "02:00"
     },
 
