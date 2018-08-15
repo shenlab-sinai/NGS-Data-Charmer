@@ -28,7 +28,7 @@ Copy the config.yaml, run_snakemake.sh and Snakefile to your NGS project directo
 ```
 Make the required changes to the config.yaml file.
 
-Next, type `sh run_snakemake.sh` or `nohup sh run_snakemake.sh &` (to run in background).
+Finally, type `sh run_snakemake.sh` followed by the maximum number of CPU cores to be used by snakemake. For example, type `sh run_snakemake.sh 2` for 2 CPU cores. You can also type `nohup sh run_snakemake.sh 2 &` to run the pipeline in background.
 
 ## Usage on an LSF cluser:
 
