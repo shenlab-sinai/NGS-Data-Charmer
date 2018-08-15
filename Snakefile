@@ -1,8 +1,8 @@
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
-ALL_TDF = expand('tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
-ALL_BW = expand('bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
+ALL_TDF = expand('processed/tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
+ALL_BW = expand('processed/bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
 ALL_BED = expand('bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
@@ -35,7 +35,7 @@ if config["type"] == "single": # alignment
 		params:
 			index = config["index"]
 		output:
-			sam = temp("processed/{sample}.sam")
+			sam = temp("processed/bam/{sample}.sam")
 		threads: config["threads_for_alignment"]
 		log:
 			"logs/{sample}.alignment.log"
@@ -66,7 +66,7 @@ elif config["type"] == "paired":
 		params:
 			index = config["index"]
 		output:
-			sam = temp("processed/{sample}.sam")
+			sam = temp("processed/bam/{sample}.sam")
 		threads: config["threads_for_alignment"]
 		log:
 			"logs/{sample}.alignment.log"
@@ -76,36 +76,36 @@ elif config["type"] == "paired":
 
 rule sam_to_unique: # chipseq
 	input:
-		sam = "processed/{sample}.sam"
+		sam = "processed/bam/{sample}.sam"
 	output:
-		unique = temp("processed/{sample}.unique.sam")
+		unique = temp("processed/bam/{sample}.unique.sam")
 	run:
 		shell("grep -E 'NH:i:1|@' {input.sam} > {output.unique}")
 
 rule sam_unique_to_bam:
 	input:
-		sam = "processed/{sample}.sam" if config["experiment"] == "rnaseq" else "processed/{sample}.unique.sam"
+		sam = "processed/bam/{sample}.sam" if config["experiment"] == "rnaseq" else "processed/bam/{sample}.unique.sam"
 	output:
-		bam = temp("processed/{sample}.bam")
+		bam = temp("processed/bam/{sample}.bam")
 	shell:
 		"samtools view -Sb {input.sam} > {output.bam}"
 
 rule bam_to_sortedbam:
 	input:
-		bam = "processed/{sample}.bam"
+		bam = "processed/bam/{sample}.bam"
 	output:
-		sorted_bam = "processed/{sample}.sorted.bam"
+		sorted_bam = "processed/bam/{sample}.sorted.bam"
 	shell:
-		"samtools sort -T processed/{wildcards.sample} "
+		"samtools sort -T processed/bam/{wildcards.sample} "
 		"-O bam {input.bam} > {output.sorted_bam}"
 
 # chipseq 
 
 rule sortedbam_to_rmdup:
 	input:
-		sorted_bam = "processed/{sample}.sorted.bam"
+		sorted_bam = "processed/bam/{sample}.sorted.bam"
 	output:
-		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+		dup_removed = "processed/bam/{sample}.unique.sorted.rmdup.bam"
 	log:
 		"logs/{sample}.rmdup.log"
 	run:
@@ -114,11 +114,11 @@ rule sortedbam_to_rmdup:
 
 rule rmdup_to_tdf:
 	input:
-		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
+		dup_removed = "processed/bam/{sample}.unique.sorted.rmdup.bam"
 	params:
 		chr_sizes = config["chr_sizes"]
 	output:
-		tdf = "tdf/{sample}.unique.sorted.rmdup.tdf"
+		tdf = "processed/tdf/{sample}.unique.sorted.rmdup.tdf"
 	log:
 		"logs/{sample}.tdf.log"
 	shell:
@@ -127,21 +127,19 @@ rule rmdup_to_tdf:
 
 rule rmdup_to_chrbam:
 	input:
-		dup_removed = "processed/{sample}.unique.sorted.rmdup.bam"
-	params:
-		sam_chr_header = config["sam_chr_header"]
+		dup_removed = "processed/bam/{sample}.unique.sorted.rmdup.bam"
 	output:
-		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
 	log:
 		"logs/{sample}.chrbam.log"
-	shell:
-		"samtools reheader {params.sam_chr_header} {input.dup_removed} > {output.chrbam}"
+	run:
+		shell('samtools view -H {input.dup_removed} | sed -e "s/SN:\([0-9XY]\)/SN:chr\\1/" -e "s/SN:MT/SN:chrM/" | samtools reheader - {input.dup_removed} > {output.chrbam}')
 
 rule chrbam_to_bw:
 	input:
-		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
-		bw_file = "bw/{sample}.unique.sorted.rmdup.chr.bw"
+		bw_file = "processed/bw/{sample}.unique.sorted.rmdup.chr.bw"
 	log:
 		"logs/{sample}.bw.log"
 	run:
@@ -150,7 +148,7 @@ rule chrbam_to_bw:
 
 rule chrbam_to_bed:
 	input:
-		chrbam = "processed/{sample}.unique.sorted.rmdup.chr.bam"
+		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
 		bed = "bed/{sample}.unique.sorted.rmdup.chr.bed"
 	log:
@@ -162,10 +160,10 @@ rule chrbam_to_bed:
 
 rule sortedbam_to_counts:
 	input:
-		sorted_bam = "processed/{sample}.sorted.bam",
+		sorted_bam = "processed/bam/{sample}.sorted.bam",
 		gtf = config["gtf"]
 	output:
-		counts = "processed/{sample}.counts.txt"
+		counts = "processed/counts/{sample}.counts.txt"
 	log:
 		"logs/{sample}.htseq_counts.log"
 	shell:
@@ -174,7 +172,7 @@ rule sortedbam_to_counts:
 
 rule counts_matrix:
 	input:
-		counts = expand("processed/{sample}.counts.txt", \
+		counts = expand("processed/counts/{sample}.counts.txt", \
 						sample=SAMPLES)
 	output:
 		matrix = "processed/htseq_counts_matrix.txt"
@@ -211,7 +209,7 @@ if config["experiment"] == "rnaseq":
 elif config["experiment"] == "chipseq":
 	rule run_multiqc:
 		input:
-			tdf = expand("tdf/{sample}.unique.sorted.rmdup.tdf", \
+			tdf = expand("processed/tdf/{sample}.unique.sorted.rmdup.tdf", \
 						sample = SAMPLES)
 		output:
 			multiqc_report = "multiqc_report.html"

@@ -2,13 +2,13 @@
 
 type: "single" # single or paired
 
-experiment: "rnaseq" # chipseq or rnaseq
+experiment: "chipseq" # chipseq or rnaseq
 
-threads_for_alignment: 2
+threads_for_alignment: 1
 
 index: "/home/aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 
-multiqc_yaml: "/home/aarthi/resources/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
+multiqc_yaml: "multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
 
 
@@ -21,12 +21,4 @@ gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file
 # ONLY FOR CHIPSEQ -
 
 chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
-
-sam_chr_header: "/home/aarthi/resources/header_mm10_90_chr.sam"
-
-
-
-
-
-
 
