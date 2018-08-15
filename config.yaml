@@ -8,7 +8,7 @@ threads_for_alignment: 1
 
 index: "/home/aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 
-multiqc_yaml: "multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
+multiqc_yaml: "/home/aarthi/resources/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
 
 
