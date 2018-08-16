@@ -3,7 +3,7 @@ configfile: "config.yaml"
 
 ALL_TDF = expand('processed/tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
 ALL_BW = expand('processed/bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
-ALL_BED = expand('bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
+ALL_BED = expand('processed/bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
 MULTIQC_REPORT = "multiqc_report.html"
@@ -150,7 +150,7 @@ rule chrbam_to_bed:
 	input:
 		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
 	output:
-		bed = "bed/{sample}.unique.sorted.rmdup.chr.bed"
+		bed = "processed/bed/{sample}.unique.sorted.rmdup.chr.bed"
 	log:
 		"logs/{sample}.bed.log"
 	shell:
