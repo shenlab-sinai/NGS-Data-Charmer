@@ -167,7 +167,7 @@ rule sortedbam_to_counts:
 	log:
 		"logs/{sample}.htseq_counts.log"
 	shell:
-		"htseq-count -f bam -s no {input.sorted_bam} "
+		"htseq-count -f bam -r pos -s no {input.sorted_bam} "
 		"{input.gtf} > {output.counts} 2> {log}"
 
 rule counts_matrix:
