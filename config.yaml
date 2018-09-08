@@ -1,20 +1,20 @@
 # REQUIRED ARGUMENTS -
 
-type: "single" # single or paired
+type: "paired" # single or paired
 
-experiment: "chipseq" # chipseq or rnaseq
+experiment: "rnaseq" # chipseq or rnaseq
 
 threads_for_alignment: 1
 
-index: "/home/aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
+index: "/Users/Aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 
-multiqc_yaml: "/home/aarthi/resources/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
+multiqc_yaml: "/Users/Aarthi/resources/multiqc_config.yaml" # example file provided in NGS-Data-Charmer folder
 
 
 
 # ONLY FOR RNASEQ -
 
-gtf: "/home/aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
+gtf: "/Users/Aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
 
 
 

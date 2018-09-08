@@ -1,9 +1,12 @@
 SAMPLES, = glob_wildcards("fastq/{sample}_R1_001.fastq.gz")
 configfile: "config.yaml"
 
-ALL_TDF = expand('processed/tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES)
-ALL_BW = expand('processed/bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES)
-ALL_BED = expand('processed/bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES)
+ALL_TDF = expand('processed/tdf/{sample}.unique.sorted.rmdup.tdf', 
+			sample=SAMPLES)
+ALL_BW = expand('processed/bw/{sample}.unique.sorted.rmdup.chr.bw', 
+			sample=SAMPLES)
+ALL_BED = expand('processed/bed/{sample}.unique.sorted.rmdup.chr.bed', 
+			sample=SAMPLES)
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
 MULTIQC_REPORT = "multiqc_report.html"
@@ -40,8 +43,8 @@ if config["type"] == "single": # alignment
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
-			"hisat2 -p {threads} -x {params.index} -U {input.trimmed_fastq} "
-			"-S {output.sam} 2> {log}"
+			"hisat2 -p {threads} -x {params.index} -U "
+			"{input.trimmed_fastq} -S {output.sam} 2> {log}"
 
 elif config["type"] == "paired":
 	rule trim_fastq_fastqc:
@@ -71,8 +74,9 @@ elif config["type"] == "paired":
 		log:
 			"logs/{sample}.alignment.log"
 		shell:
-			"hisat2 -p {threads} -x {params.index} -1 {input.trimmed_pair1} "
-			"-2 {input.trimmed_pair2} -S {output.sam} 2> {log}"
+			"hisat2 -p {threads} -x {params.index} -1 "
+			"{input.trimmed_pair1} -2 {input.trimmed_pair2} "
+			"-S {output.sam} 2> {log}"
 
 rule sam_to_unique: # chipseq
 	input:
@@ -84,7 +88,8 @@ rule sam_to_unique: # chipseq
 
 rule sam_unique_to_bam:
 	input:
-		sam = "processed/bam/{sample}.sam" if config["experiment"] == "rnaseq" else "processed/bam/{sample}.unique.sam"
+		sam = "processed/bam/{sample}.sam" if config["experiment"] == "rnaseq" 
+				else "processed/bam/{sample}.unique.sam"
 	output:
 		bam = temp("processed/bam/{sample}.bam")
 	shell:
@@ -132,8 +137,10 @@ rule rmdup_to_chrbam:
 		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
 	log:
 		"logs/{sample}.chrbam.log"
-	run:
-		shell('samtools view -H {input.dup_removed} | sed -e "s/SN:\([0-9XY]\)/SN:chr\\1/" -e "s/SN:MT/SN:chrM/" | samtools reheader - {input.dup_removed} > {output.chrbam}')
+	shell:
+		'samtools view -H {input.dup_removed} '
+		'| sed -e "s/SN:\([0-9XY]\)/SN:chr\\1/" -e "s/SN:MT/SN:chrM/" '
+		'| samtools reheader - {input.dup_removed} > {output.chrbam}'
 
 rule chrbam_to_bw:
 	input:
@@ -167,8 +174,11 @@ rule sortedbam_to_counts:
 	log:
 		"logs/{sample}.htseq_counts.log"
 	shell:
-		"htseq-count -f bam -r pos -s no {input.sorted_bam} "
-		"{input.gtf} > {output.counts} 2> {log}"
+		"featureCounts -p -t gene -a {input.gtf} -o {output.counts} "
+		"{input.sorted_bam} 2> {log}" if config["type"] == "paired" 
+		else "featureCounts -t gene -a {input.gtf} -o {output.counts} "
+		"{input.sorted_bam} 2> {log}"
+
 
 rule counts_matrix:
 	input:
@@ -182,17 +192,19 @@ rule counts_matrix:
 		dict_of_counts = {}
 
 		for file in input:
-			sample = file.split("/")[1].split(".")[0]
+			sample = file.split(".")[0]
 			dict_of_counts[sample] = {}
-
+			
 			with open(file, "r") as infile:
+				next(infile)
+				next(infile)
 				for lines in infile:
 					lines = lines.strip().split("\t")
-					if "__" not in lines[0]:
-						dict_of_counts[sample][lines[0]] = lines[1]
+					dict_of_counts[sample][lines[0]] = lines[6]
 
 		dataframe = pd.DataFrame(dict_of_counts)
 		dataframe.to_csv(output[0], sep = '\t')
+
 
 # multiqc
 if config["experiment"] == "rnaseq":
