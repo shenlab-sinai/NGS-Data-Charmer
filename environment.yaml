@@ -18,5 +18,5 @@ dependencies:
   - igvtools=2.3.93
   - bedtools=2.27.1
   - trim-galore=0.4.5
-  - deeptools=3.1.0
+  - deeptools=3.1.3
   - multiqc=1.6
