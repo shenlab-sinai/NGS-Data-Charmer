@@ -10,10 +10,11 @@ ALL_BED = expand('processed/bed/{sample}.unique.sorted.rmdup.chr.bed',
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
 MULTIQC_REPORT = "multiqc_report.html"
+PCA_PLOT = "processed/PCA.pdf"
 
 if config["experiment"] == "chipseq": # defining target
 	rule all:
-		input: ALL_BED, ALL_TDF, ALL_BW, MULTIQC_REPORT
+		input: ALL_BED, ALL_TDF, ALL_BW, MULTIQC_REPORT, PCA_PLOT
 
 elif config["experiment"] == "rnaseq":
 	rule all:
@@ -104,6 +105,17 @@ rule bam_to_sortedbam:
 		"samtools sort -T processed/bam/{wildcards.sample} "
 		"-O bam {input.bam} > {output.sorted_bam}"
 
+rule sortedbam_to_rmdup_rnaseq:
+	input:
+		sorted_bam = "processed/bam/{sample}.sorted.bam"
+	output:
+		dup_removed = "processed/bam/{sample}.sorted.rmdup.bam"
+	log:
+		"logs/{sample}.rmdup.log"
+	run:
+		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
+		shell("rm -f {input.sorted_bam}")
+
 # chipseq 
 
 rule sortedbam_to_rmdup:
@@ -163,11 +175,23 @@ rule chrbam_to_bed:
 	shell:
 		"bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
+rule chrbam_to_pca:
+	input:
+		multiqc_report = "multiqc_report.html",
+		chrbams = expand("processed/bam/{sample}.unique.sorted.rmdup.chr.bam", \
+					sample=SAMPLES)
+	output:
+		plot = "processed/PCA.pdf"
+	run:
+		shell("multiBamSummary bins --bamfiles {input.chrbams} --binSize 1000 -v -out results.npz")
+		shell("plotPCA -in results.npz -o PCA.pdf --ntop 500 --log2 --plotFileFormat pdf")
+
 # rnaseq
 
 rule sortedbam_to_counts:
 	input:
-		sorted_bam = "processed/bam/{sample}.sorted.bam",
+		sorted_bam = "processed/bam/{sample}.sorted.bam" if config["type"] == "single"
+						else "processed/bam/{sample}.sorted.rmdup.bam",
 		gtf = config["gtf"]
 	output:
 		counts = "processed/counts/{sample}.counts.txt"
@@ -178,7 +202,6 @@ rule sortedbam_to_counts:
 		"{input.sorted_bam} 2> {log}" if config["type"] == "paired" 
 		else "featureCounts -t gene -a {input.gtf} -o {output.counts} "
 		"{input.sorted_bam} 2> {log}"
-
 
 rule counts_matrix:
 	input:
@@ -191,7 +214,7 @@ rule counts_matrix:
 
 		dict_of_counts = {}
 
-		for file in input:
+		for file in input: # input here is a space separated list
 			sample = file.split(".")[0]
 			dict_of_counts[sample] = {}
 			
