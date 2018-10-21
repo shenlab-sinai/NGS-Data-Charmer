@@ -10,11 +10,10 @@ ALL_BED = expand('processed/bed/{sample}.unique.sorted.rmdup.chr.bed',
 
 COUNTS_MATRIX = "processed/htseq_counts_matrix.txt"
 MULTIQC_REPORT = "multiqc_report.html"
-PCA_PLOT = "processed/PCA.pdf"
 
 if config["experiment"] == "chipseq": # defining target
 	rule all:
-		input: ALL_BED, ALL_TDF, ALL_BW, MULTIQC_REPORT, PCA_PLOT
+		input: ALL_BED, ALL_TDF, ALL_BW, MULTIQC_REPORT
 
 elif config["experiment"] == "rnaseq":
 	rule all:
@@ -115,7 +114,7 @@ rule sortedbam_to_rmdup_rnaseq:
 	run:
 		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
 		shell("rm -f {input.sorted_bam}")
-
+		
 # chipseq 
 
 rule sortedbam_to_rmdup:
@@ -175,17 +174,6 @@ rule chrbam_to_bed:
 	shell:
 		"bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
-rule chrbam_to_pca:
-	input:
-		multiqc_report = "multiqc_report.html",
-		chrbams = expand("processed/bam/{sample}.unique.sorted.rmdup.chr.bam", \
-					sample=SAMPLES)
-	output:
-		plot = "processed/PCA.pdf"
-	run:
-		shell("multiBamSummary bins --bamfiles {input.chrbams} --binSize 1000 -v -out results.npz")
-		shell("plotPCA -in results.npz -o PCA.pdf --ntop 500 --log2 --plotFileFormat pdf")
-
 # rnaseq
 
 rule sortedbam_to_counts:
@@ -203,6 +191,7 @@ rule sortedbam_to_counts:
 		else "featureCounts -t gene -a {input.gtf} -o {output.counts} "
 		"{input.sorted_bam} 2> {log}"
 
+
 rule counts_matrix:
 	input:
 		counts = expand("processed/counts/{sample}.counts.txt", \
@@ -214,7 +203,7 @@ rule counts_matrix:
 
 		dict_of_counts = {}
 
-		for file in input: # input here is a space separated list
+		for file in input:
 			sample = file.split(".")[0]
 			dict_of_counts[sample] = {}
 			
