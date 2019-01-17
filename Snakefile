@@ -104,16 +104,17 @@ rule bam_to_sortedbam:
 		"samtools sort -T processed/bam/{wildcards.sample} "
 		"-O bam {input.bam} > {output.sorted_bam}"
 
-rule sortedbam_to_rmdup_rnaseq:
-	input:
-		sorted_bam = "processed/bam/{sample}.sorted.bam"
-	output:
-		dup_removed = "processed/bam/{sample}.sorted.rmdup.bam"
-	log:
-		"logs/{sample}.rmdup.log"
-	run:
-		shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
-		shell("rm -f {input.sorted_bam}")
+if config["experiment"] == "rnaseq":
+	rule sortedbam_to_rmdup_rnaseq:
+		input:
+			sorted_bam = "processed/bam/{sample}.sorted.bam"
+		output:
+			dup_removed = "processed/bam/{sample}.sorted.rmdup.bam"
+		log:
+			"logs/{sample}.rmdup.log"
+		run:
+			shell("samtools rmdup {input.sorted_bam} {output.dup_removed} 2> {log}")
+			shell("rm -f {input.sorted_bam}")
 		
 # chipseq 
 
