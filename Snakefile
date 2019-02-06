@@ -100,9 +100,10 @@ rule bam_to_sortedbam:
 		bam = "processed/bam/{sample}.bam"
 	output:
 		sorted_bam = "processed/bam/{sample}.sorted.bam"
+	threads: config["threads_for_alignment"]
 	shell:
 		"samtools sort -T processed/bam/{wildcards.sample} "
-		"-O bam {input.bam} > {output.sorted_bam}"
+		"-O bam -@ {threads} -o {output.sorted_bam} {input.bam}"
 
 if config["experiment"] == "rnaseq":
 	rule sortedbam_to_rmdup_rnaseq:
