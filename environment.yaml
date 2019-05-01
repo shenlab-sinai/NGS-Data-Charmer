@@ -6,17 +6,17 @@ channels:
   - r
   - defaults
 dependencies:
-  - graphviz=2.38.0
-  - python=3.5.1
-  - snakemake=3.11.0
-  - pyyaml=3.11
-  - hisat2=2.1.0
-  - perl=5.22.0.1
-  - subread=1.6.2
-  - pysam=0.14.1
-  - pandas=0.21.0
-  - igvtools=2.3.93
-  - bedtools=2.27.1
-  - trim-galore=0.4.5
-  - deeptools=3.1.3
-  - multiqc=1.6
+  - graphviz
+  - python
+  - snakemake
+  - pyyaml
+  - hisat2
+  - perl
+  - subread
+  - pysam
+  - pandas
+  - igvtools
+  - bedtools
+  - trim-galore
+  - deeptools
+  - multiqc
