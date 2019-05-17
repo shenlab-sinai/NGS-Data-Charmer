@@ -79,6 +79,11 @@
     "run_multiqc":
     {
         "walltime" : "00:10"
+    },
+
+    "sortedbam_to_rmdup_rnaseq":
+    {
+        "walltime"    : "04:00"
     }
 
 }

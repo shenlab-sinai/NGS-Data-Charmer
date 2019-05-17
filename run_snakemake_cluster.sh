@@ -1,4 +1,4 @@
-source activate ngs_data_charmer
+conda activate ngs_data_charmer
 
 snakemake --snakefile Snakefile \
     -j 499 \
@@ -14,4 +14,4 @@ snakemake --snakefile Snakefile \
     -o {cluster.output} \
     -e {cluster.error}"
 
-source deactivate
+conda deactivate
