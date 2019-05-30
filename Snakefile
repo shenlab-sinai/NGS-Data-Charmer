@@ -143,11 +143,11 @@ rule rmdup_to_tdf:
 		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
 		"2> {log}"
 
-rule rmdup_to_chrbam:
+rule rmdup_to_chrbam: 
 	input:
 		dup_removed = "processed/bam/{sample}.unique.sorted.rmdup.bam"
 	output:
-		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam"
+		chrbam = "processed/bam/{sample}.unique.sorted.rmdup.chr.bam" # ngsplot input
 	log:
 		"logs/{sample}.chrbam.log"
 	shell:
