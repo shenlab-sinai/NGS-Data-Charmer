@@ -4,7 +4,6 @@ snakemake --snakefile Snakefile \
     -j 499 \
     --cluster-config cluster.json \
     --cluster "bsub \
-    -m {cluster.group} \
     -P {cluster.allocation} \
     -q {cluster.queue} \
     -n {cluster.tasks} \
