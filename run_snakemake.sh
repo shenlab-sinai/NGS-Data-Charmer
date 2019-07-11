@@ -1,3 +1,3 @@
-source activate ngs_data_charmer
+conda activate ngs_data_charmer
 snakemake --snakefile Snakefile --cores "$1"
 conda deactivate

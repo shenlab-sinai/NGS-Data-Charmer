@@ -4,7 +4,7 @@ type: "paired" # single or paired
 
 experiment: "rnaseq" # chipseq or rnaseq
 
-threads_for_alignment: 1
+threads_for_alignment: 4
 
 index: "/Users/Aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 

@@ -1,7 +1,6 @@
 {
     "__default__" :
     {
-        "group"        : "manda",
         "queue"     : "alloc",
         "allocation": "acc_Nestlerlab",
         "tasks"        : 1,
@@ -15,13 +14,13 @@
 
     "trim_fastq_fastqc" :
     {
-        "walltime"    : "06:00"
+        "walltime"    : "10:00"
     },
 
     "fastq_to_sam" :
     {
         "memory"    : 24000,
-        "walltime"    : "06:00"
+        "walltime"    : "10:00"
     },
 
     "sam_to_unique":
