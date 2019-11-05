@@ -20,3 +20,7 @@ dependencies:
   - trim-galore
   - deeptools
   - multiqc
+  - bowtie2
+  - cutadapt
+  - picard
+  - gmap
