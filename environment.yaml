@@ -1,4 +1,4 @@
-name: ngs_data_charmer
+name: ngs_data_charmer_copy
 
 channels:
   - conda-forge
