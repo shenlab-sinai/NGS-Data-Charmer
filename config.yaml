@@ -2,23 +2,25 @@
 
 type: "paired" # single or paired
 
-experiment: "rnaseq" # chipseq or rnaseq
+experiment: "rnaseq" # chipseq or rnaseq or cutrun or isoseq
 
 threads_for_alignment: 4
 
 index: "/Users/Aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
 
+bowtie2_index: "/path/to/mm10/Sequence/Bowtie2Index/genome" # path to basename of bowtie2 index
+
 multiqc_yaml: "/Users/Aarthi/resources/multiqc_config.yaml" # example file provided in NGS-Data-Charmer folder
 
+# FOR CUT&RUN
+read_length: 75 # Read length
 
+read_length_max: 74 # Read length, minus one. This will get hard-coded into the snakefile later.
+
+# FOR CUT&RUN AND CHIPSEQ -
+
+chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
 
 # ONLY FOR RNASEQ -
 
 gtf: "/Users/Aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
-
-
-
-# ONLY FOR CHIPSEQ -
-
-chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
-
