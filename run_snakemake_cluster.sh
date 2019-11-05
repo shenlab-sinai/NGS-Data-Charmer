@@ -1,4 +1,4 @@
-conda activate ngs_data_charmer
+conda activate ngs_data_charmer_copy
 
 snakemake --snakefile Snakefile \
     -j 499 \
