@@ -24,3 +24,5 @@ chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (o
 # ONLY FOR RNASEQ -
 
 gtf: "/Users/Aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
+
+count_scheme: "fraction" # fraction or count_all or count_uniq
