@@ -83,6 +83,35 @@
     "sortedbam_to_rmdup_rnaseq":
     {
         "walltime"    : "04:00"
+    },
+    
+    "split_length_long":
+    {
+        "walltime"    : "08:00"
+    },
+    "split_length_short":
+    {
+        "walltime"    : "08:00"
+    },
+    "trim_long":
+    {
+        "walltime"    : "08:00"
+    },
+    "combine_split_lengths":
+    {
+        "walltime"    : "0:20"
+    },
+    "sort_combined_lengths":
+    {
+        "walltime"    : "03:00"
+    },
+    "bowtie2":
+    {
+        "walltime"    : "08:00"
+    },
+    "rmdup":
+    {
+        "walltime"    : "03:00"
     }
 
 }
