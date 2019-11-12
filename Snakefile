@@ -1,4 +1,4 @@
-configfile: "config_full.yaml"
+configfile: "config.yaml"
 
 myfastqpath="./fastq/"
 import os
