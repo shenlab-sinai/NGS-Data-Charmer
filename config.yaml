@@ -1,28 +1,29 @@
-# REQUIRED ARGUMENTS -
+#required arguments
 
 type: "paired" # single or paired
 
-experiment: "rnaseq" # chipseq or rnaseq or cutrun or isoseq
+experiment: "cutrun" # chipseq or rnaseq or cutrun
 
 threads_for_alignment: 4
 
-index: "/Users/Aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
+index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
-bowtie2_index: "/path/to/mm10/Sequence/Bowtie2Index/genome" # path to basename of bowtie2 index
+bowtie2_index: "/path/to/UCSC/mm10/Sequence/Bowtie2Index/genome" # path to basename of bowtie2 index
 
-multiqc_yaml: "/Users/Aarthi/resources/multiqc_config.yaml" # example file provided in NGS-Data-Charmer folder
-
-# FOR CUT&RUN
-read_length: 75 # Read length
-
-read_length_max: 74 # Read length, minus one. This will get hard-coded into the snakefile later.
+multiqc_yaml: "/path/to/NGS-Data-Charmer-COPY/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
 # FOR CUT&RUN AND CHIPSEQ -
-
-chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
-
+chr_sizes: "/path/to/mm10/mm10_chr_len" # path to chr.sizes file (only for chipseq)
 # ONLY FOR RNASEQ -
-
-gtf: "/Users/Aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
-
-count_scheme: "fraction" # fraction or count_all or count_uniq
+gtf: "/path/to/hisat_genome/UCSC_mm10_compGENCODE22.gtf" # path to gtf file 
+count_scheme: "fraction" # fraction or count_all or count_uniq (for default featureCounts behavior (no counts when features overlap), use "count_uniq")
+# OUTPUT options (for full workflow, set "to_multiqc" to "TRUE")
+keep_fastq: "TRUE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
+to_base_alignment: "TRUE" # Stop after alignment
+keep_base_alignment: "TRUE" # Independent rule; Keep the unfiltered bam file (contains unmapped reads and duplicates)
+to_dedup_alignment: "FALSE" # Stop after deduplication (de-duplicated bam file)
+to_dedup_chr_alignment: "FALSE" # Stop after filtering deduplicated bam file for main chromosomes
+to_dedup_tdf: "FALSE" # Stop after producing TDF file
+to_dedup_bed: "FALSE" # Stop after producing bed file
+to_dedup_chr_bw: "FALSE" # Stop after producing bigwig of reads from main chromsomes
+to_multiqc: "FALSE" # Run entire pipeline and create multiqc report

@@ -44,6 +44,11 @@
         "walltime"    : "04:00"
     },
 
+    "bam_to_unique_mapped":
+    {
+        "walltime"    : "04:00"
+    },
+
     "rmdup_to_tdf":
     {
         "walltime"    : "02:00"
@@ -89,26 +94,37 @@
     {
         "walltime"    : "08:00"
     },
+
     "split_length_short":
     {
         "walltime"    : "08:00"
     },
+
     "trim_long":
     {
         "walltime"    : "08:00"
     },
+
     "combine_split_lengths":
     {
         "walltime"    : "0:20"
     },
+
     "sort_combined_lengths":
     {
         "walltime"    : "03:00"
     },
+
     "bowtie2":
     {
         "walltime"    : "08:00"
     },
+
+    "sort_alignment":
+    {
+        "walltime"    : "03:00"
+    },
+
     "rmdup":
     {
         "walltime"    : "03:00"
