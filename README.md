@@ -69,7 +69,7 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 ## File naming requirements
 
- The Snakemake pipeline is now able to handle mixtures of fastq file endings. It does this by detecting the most common forward read file ending (e.g. *.R1.fq.gz), then renaming any files that do not conform to that file ending. This process allows for a large variety of possible fastq file endings, however, if you use a completely unexpected file naming system (e.g. Sample1.A.fq.gz and Sample1.B.fq.gz, where you intended "A" to mean the forward read and "B" to mean the reverse read), the unexpected file names will be treated as single-end files.  Please note that files ending only in ".fq.gz", ".fastq.gz", ".fq", and ".fastq" (e.g. "SampleA.fq.gz", "SampleB.fastq.gz", "SampleC.fq", and "SampleD.fastq") will be assumed to be single end and be renamed to the most common forward read file ending (or if your dataset consists solely of such files, they will be renamed to "*.fq" or "*.fq.gz")
+ The Snakemake pipeline is now able to handle mixtures of fastq file endings. It does this by detecting the most common forward read file ending (e.g. \*.R1.fq.gz), then renaming any files that do not conform to that file ending. This process allows for a large variety of possible fastq file endings, however, if you use a completely unexpected file naming system (e.g. Sample1.A.fq.gz and Sample1.B.fq.gz, where you intended "A" to mean the forward read and "B" to mean the reverse read), the unexpected file names will be treated as single-end files.  Please note that files ending only in ".fq.gz", ".fastq.gz", ".fq", and ".fastq" (e.g. "SampleA.fq.gz", "SampleB.fastq.gz", "SampleC.fq", and "SampleD.fastq") will be assumed to be single end and be renamed to the most common forward read file ending (or if your dataset consists solely of such files, they will be renamed to "\*.fq" or "\*.fq.gz")
 
 Mixtures of ".gz" and non-gzipped fastq files are not allowed, and will result in an error. If you do have such a mixture, please gzip the uncompressed fastq files with the "gzip" command OR unzip any compressed fastq files prior to running the pipeline. 
 
@@ -77,11 +77,18 @@ Please note that input fastq file names that do not conform to any of the expect
 
 ## Output options
 
-You may want to retain the trimmed fastq files or unfiltered bam files. Additionally, you may want to only run the workflow until a certain point (e.g. until duplicate removal). This is possible by modifying the "output" options in the configuration file to "TRUE" or "FALSE". 
+You may want to retain the trimmed fastq files or unfiltered bam files. This is possible by modifying the "output" options in the configuration file to "TRUE" or "FALSE". 
+
+## Test dataset
+
+A small example dataset, composed of two downsampled paired end Cut&Run samples, with 250K paired-end reads in each sample, are publically available for use: 
+https://drive.google.com/drive/folders/1stoAAxEDL4dtJ4Vjm6y0FnnCH--dM_MZ?usp=sharing
+
+While originally derived from Cut&Run sequencing, the sample dataset can also be run using the "rnaseq" and "chipseq" options.
 
 ## Additional Snakemake options:
 
-You can also customize the run_snakemake.sh and run_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
+You can also customize the run\_snakemake.sh and run\_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
 
 `source activate ngs_data_charmer_copy`
 
