@@ -14,3 +14,4 @@ bed
 multiqc_data
 multiqc_report.html
 tdf
+Snakefile_fordag

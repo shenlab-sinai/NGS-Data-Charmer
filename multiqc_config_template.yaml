@@ -23,8 +23,8 @@ title: null
 prepend_dirs: False
 
 # Default output filenames
-output_fn_name: multiqc_report.html
-data_dir_name: ./processed/multiqc_data
+output_fn_name: ./output/multiqc_report.html
+data_dir_name: ./output/multiqc_data
 
 # Whether to create the parsed data directory in addition to the report
 make_data_dir: True
