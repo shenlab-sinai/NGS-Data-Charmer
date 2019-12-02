@@ -32,7 +32,9 @@ Copy the config.yaml, run_snakemake.sh and Snakefile to your NGS project directo
 │   ├── D1-WC_S2_L003_R1_001.fastq.gz
 │   └── D1-WC_S2_L003_R2_001.fastq.gz
 ├── run_snakemake.sh
-└── Snakefile
+├── Snakefile_CR_preprocessing (required for Cut&Run)
+├── Snakefile_RNAandCHIP_preprocessing (required for RNA-seq and ChIPseq)
+└── Snakefile (required for all analyses)
 ```
 Make the required changes to the config.yaml file.
 
