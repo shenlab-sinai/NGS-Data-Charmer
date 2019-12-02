@@ -1,7 +1,7 @@
 {
     "__default__" :
     {
-        "queue"     : "alloc",
+        "queue"     : "premium",
         "allocation": "acc_Nestlerlab",
         "tasks"        : 1,
         "memory"    : 12000,
@@ -17,23 +17,13 @@
         "walltime"    : "10:00"
     },
 
-    "fastq_to_sam" :
+    "fastq_to_bam" :
     {
         "memory"    : 24000,
         "walltime"    : "10:00"
     },
 
-    "sam_to_unique":
-    {
-        "walltime"     : "02:00"
-    },
-
-    "sam_unique_to_bam":
-    {
-        "walltime"    : "02:00"
-    },
-
-    "bam_to_sortedbam":
+    "bam_to_unique_mapped":
     {
         "memory"    : 24000,
         "walltime" : "06:00"
@@ -118,11 +108,6 @@
     "bowtie2":
     {
         "walltime"    : "08:00"
-    },
-
-    "sort_alignment":
-    {
-        "walltime"    : "03:00"
     },
 
     "rmdup":

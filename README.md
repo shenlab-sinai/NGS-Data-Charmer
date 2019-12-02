@@ -49,7 +49,9 @@ Copy the config.yaml, run_snakemake_cluster.sh, cluster.json and Snakefile to yo
 │   ├── negD1-WC-40_S2_L003_R1_001.fastq.gz
 │   └── negD1-WC-40_S2_L003_R2_001.fastq.gz
 ├── run_snakemake_cluster.sh
-└── Snakefile
+├── Snakefile_CR_preprocessing (required for Cut&Run)
+├── Snakefile_RNAandCHIP_preprocessing (required for RNA-seq and ChIPseq)
+└── Snakefile (required for all analyses)
 ```
 Make the required changes to the config.yaml and cluster.json file.
 
@@ -67,13 +69,48 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
  ![ScreenShot](/dag/dag_cutrun.png)
 
+## Output directory structure:
+```
+.
+├── cluster.json
+├── config.yaml
+├── fastq
+│   ├── negD1-WC-40_S2_L003_R1_001.fastq.gz
+│   └── negD1-WC-40_S2_L003_R2_001.fastq.gz
+├── run_snakemake_cluster.sh
+├── Snakefile_CR_preprocessing
+├── Snakefile_RNAandCHIP_preprocessing
+├── Snakefile
+└── output
+    ├── htseq_counts_matrix.txt (RNA-seq)
+    ├── multiqc_report.html
+    ├── trim_fastq
+    	├── negD1-WC-40_S2_L003_R1_trimmed.fq.gz (optional)
+    	├── negD1-WC-40_S2_L003_R1.fq.gz_trimming_report.txt
+    	├── negD1-WC-40_S2_L003_R2_trimmed.fq.gz (optional)
+    	└── negD1-WC-40_S2_L003_R2.fq.gz_trimming_report.txt
+    ├── logs
+    ├── fastqc
+    	├── negD1-WC-40_S2_L003_R1_fastqc.html
+    	├── negD1-WC-40_S2_L003_R1_fastqc.zip
+    	├── negD1-WC-40_S2_L003_R2_fastqc.html
+    	└── negD1-WC-40_S2_L003_R2_fastqc.zip
+    ├── bam
+    	├── negD1-WC-40_S2_L003.bam (optional)
+    	└── negD1-WC-40_S2_L003.(unique.)sorted.rmdup.bam
+    ├── bw
+    	└── negD1-WC-40_S2_L003.unique.sorted.rmdup.bw
+    ├── tdf
+    	└── negD1-WC-40_S2_L003.unique.sorted.rmdup.tdf
+    └── counts
+    	└── negD1-WC-40_S2_L003.counts.txt (RNA-seq)
+```
+
 ## File naming requirements
 
- The Snakemake pipeline is now able to handle mixtures of fastq file endings. It does this by detecting the most common forward read file ending (e.g. \*.R1.fq.gz), then renaming any files that do not conform to that file ending. This process allows for a large variety of possible fastq file endings, however, if you use a completely unexpected file naming system (e.g. Sample1.A.fq.gz and Sample1.B.fq.gz, where you intended "A" to mean the forward read and "B" to mean the reverse read), the unexpected file names will be treated as single-end files.  Please note that files ending only in ".fq.gz", ".fastq.gz", ".fq", and ".fastq" (e.g. "SampleA.fq.gz", "SampleB.fastq.gz", "SampleC.fq", and "SampleD.fastq") will be assumed to be single end and be renamed to the most common forward read file ending (or if your dataset consists solely of such files, they will be renamed to "\*.fq" or "\*.fq.gz")
+It is best practice to ensure that sequencing files are properly paired and have identical file endings prior to analyzing sequencing reads. However, the Snakemake pipeline is robust to mixtures of fastq file endings. It does this by detecting the most common forward read file ending (e.g. \*.R1.fq.gz), then renaming any files that do not conform to the most common fastq file ending.
 
-Mixtures of ".gz" and non-gzipped fastq files are not allowed, and will result in an error. If you do have such a mixture, please gzip the uncompressed fastq files with the "gzip" command OR unzip any compressed fastq files prior to running the pipeline. 
-
-Please note that input fastq file names that do not conform to any of the expected patterns will be ignored by Snakemake (e.g. "Treatment.gz" or "Treatment.txt" or "Treatment"). Mixtures 
+Please note that input fastq file names that do not conform to any of the expected patterns will be ignored by Snakemake (e.g. "Treatment.gz" or "Treatment.txt" or "Treatment"). Mixtures of ".gz" and non-gzipped fastq files are NOT allowed, and will result in an error. If you do have such a mixture, please gzip the uncompressed fastq files with the "gzip" command OR unzip any compressed fastq files prior to running the pipeline. 
 
 ## Output options
 
