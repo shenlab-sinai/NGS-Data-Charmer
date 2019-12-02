@@ -1,0 +1,263 @@
+import os
+from os import listdir
+from os.path import isfile, join
+import re
+from Bio import SeqIO
+import gzip
+
+configfile: "config.yaml"
+myfastqpath = "fastq/"
+
+# HELPER FUNCTIONS
+
+# Create the pattern of file endings
+
+def create_endings(x):
+	"""
+	Returns a list of likely fastq file endings
+
+	Input Parameter: 
+	x (int): Either 1 or 2, indicating the forward (1) or reverse (2) read.
+
+	Returns: 
+	list: A list of strings, representing the file endings a user might use for denoting their fastq files.
+	"""
+	return(["_R" + str(x) + "_001.fastq", "_R" + str(x) + "_001.fq", "_R" + str(x) + ".fastq", "_R" + str(x) + ".fq", "_" + str(x) + ".fastq", "_" + str(x) + ".fq", ".R" + str(x) + "_001.fastq", ".R" + str(x) + "_001.fq", ".R" + str(x) + ".fastq", ".R" + str(x) + ".fq", "." + str(x) + ".fastq", "." + str(x) + ".fq", "_r" + str(x) + "_001.fastq", "_r" + str(x) + "_001.fq", "_r" + str(x) + ".fastq", "_r" + str(x) + ".fq", ".r" + str(x) + "_001.fastq", ".r" + str(x) + "_001.fq", ".r" + str(x) + ".fastq", ".r" + str(x) + ".fq"])
+
+# Function to list the fastq files present in the fastq folder
+def getfilelist(myfastqpath):
+	"""
+	Extracts fastq files from the list of files present in your fastq directory.
+
+	Input Parameter: 
+	myfastqpath (string): directory containing your fastq files.
+	
+	Returns:
+	list: List containing two strings. 
+	1st string is all non-metadata files in the fastq directory
+	2nd string is all non-metadata files ending in '.gz'
+	"""
+	onlyfiles = [f for f in listdir(myfastqpath) if isfile(join(myfastqpath, f))]
+	onlyfiles = [i for i in onlyfiles if i.endswith((".fastq", ".fq", ".fastq.gz", ".fq.gz"))]
+	gzfiles = [i for i in onlyfiles if i.endswith((".gz"))]
+	return([onlyfiles, gzfiles])
+
+# Unify fastq files to single file ending
+def fix_input_files(file_suffix, input_fileset):
+	"""
+	Renames mixed input fastq files to the most common file ending and returns the selected file ending. NOTE: This step permenantly renames your fastq files from their original file ending. 
+
+	Input Parameter: 
+	file_suffix (string): ".gz" or ""; Gzipped fastq files are expected to end with the suffix ".gz". If files are NOT gzipped, the input is "".
+	
+	input_fileset (list): List of fastq file names to be examined. As written, gzipped files are listed within the variable 'gzfiles' and non-gzipped files are listed within the variable 'onlyfiles'.
+
+	Returns: 
+	list: A list containing four strings, the selected Read1 (forward read) file ending and the corresponding Read2 (reverse read) file ending, a list of all fastq-like files, and a list of gzipped fastq-like files.
+	"""
+	# Create the series of fastq file endings to search
+	base_endings_r1 = create_endings(1)
+	base_endings_r2 = create_endings(2)
+	ending_dictionary = dict(zip(base_endings_r1, base_endings_r2))  # Define the R1 and R1 suffix pairs for reference
+	mylist = list()  # Create empty list 
+	for x in base_endings_r1:  # first traverse the R1 base endings to find the common ending
+		matched_ends = [i for i in input_fileset if i.endswith(x + file_suffix)]
+		if(len(matched_ends) > 0):
+			mylist.append((x, len(matched_ends)))
+
+	if len(mylist) == 0:  # Contingency: if all samples are single-end and do not have a common forward read ending
+		print("Your dataset appears to be entirely single-end files.")
+		odd_files = [i for i in input_fileset if i.endswith(".fq" + file_suffix)]
+		if len(odd_files) > 0:
+			oldnames = odd_files
+			old_rep = [i.replace(".fq" + suffix, ".fastq" + suffix) for i in oldnames]
+			[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
+		# Re-assess and return filenames
+		return([".fastq", ".fastq", getfilelist(myfastqpath)[0], getfilelist(myfastqpath)[1]])
+
+	else:  # If R1 endings are present, check values and correct file names
+		mylist_dict = {key: value for (key, value) in mylist}  # create dictionary of mixed file endings
+		myR1_suffix = [key for (key, value) in mylist_dict.items() if value == max(mylist_dict.values())][0]
+		myR2_suffix = ending_dictionary[myR1_suffix]
+		mylist_dict.pop(myR1_suffix)  # remove main R1 suffix from dictionary
+		if len(mylist_dict) > 0:  # begin processing forward reads
+			for x in mylist_dict:
+				oldnames = [i for i in input_fileset if i.endswith(x + file_suffix)]
+				old_rep = [i.replace(x, myR1_suffix) for i in oldnames]
+				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
+
+		mylist = list()  # Create empty list 
+		for x in base_endings_r2:  # first traverse the R2 base endings to find the common ending
+			matched_ends = [i for i in input_fileset if i.endswith(x + file_suffix)]
+			if(len(matched_ends) > 0):
+				mylist.append(x)
+		mylist.remove(myR2_suffix)  # remove main R2 suffix from list
+		if len(mylist) > 0:  # begin processing forward reads
+			for x in mylist:
+				oldnames = [i for i in input_fileset if i.endswith(x + file_suffix)]
+				old_rep = [i.replace(x, myR2_suffix) for i in oldnames]
+				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
+
+		#Re-assess file names
+		if file_suffix == ".gz":
+			input_fileset = getfilelist(myfastqpath)[1]
+		else:
+			input_fileset = getfilelist(myfastqpath)[0]
+
+		# Now process single end files
+		odd_files = [i for i in [i for i in input_fileset if not i.endswith(myR1_suffix + file_suffix)] if not i.endswith(myR2_suffix + file_suffix)]
+		fastq_odd_1 = [i for i in odd_files if i.endswith(".fastq" + file_suffix)]
+		fastq_odd_2 = [i for i in odd_files if i.endswith(".fq" + file_suffix)]
+		if len(odd_files) > 0:
+			print("Now unifying " + str(len(odd_files)) + " single-end files to \""+ myR1_suffix + file_suffix + "\" ending")
+			if len(fastq_odd_1) > 0:  # rename files to correct ending
+				oldnames = odd_files
+				old_rep = [i.replace(".fastq" + file_suffix, myR1_suffix + file_suffix) for i in oldnames]
+				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
+			if len(fastq_odd_2) > 0:  # rename files to correct ending
+				oldnames = odd_files
+				old_rep = [i.replace(".fq" + file_suffix, myR1_suffix + file_suffix) for i in oldnames]
+				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
+		# Re-assess and return filenames and file endings
+		return([myR1_suffix, myR2_suffix, getfilelist(myfastqpath)[0], getfilelist(myfastqpath)[1]])
+
+# Create read-pair inputs for sample processing
+def create_inputs(config) :
+	"""
+	Creates the fastq file inputs needed for read trimming steps of the snakemake pipeline
+
+	Input Parameter: 
+	config (dict): Dictionary derived from config.yaml and any additional key:value pairs added during the file preperation steps. 
+
+	Returns:
+	list: List of two strings; 
+	1st string denotes the forward read
+	2nd string denotes the reverse read
+	"""
+	return([("fastq/{sample}" + expand("{ending}{suffix}",ending=R1_file_ending,suffix=suffix)[0]+""),("fastq/{sample}" + expand("{ending}{suffix}",ending=R2_file_ending,suffix=suffix)[0]+"")])
+
+# END HELPER FUNCTIONS
+
+# Retrieve the list of fastq files
+onlyfiles = getfilelist(myfastqpath)[0]
+gzfiles = getfilelist(myfastqpath)[1]
+
+# Raise exception if no fastq files present
+if len(gzfiles) == 0 and len(onlyfiles) == 0:
+	raise NameError("You do not seem to have any fastq files present to process. Now exiting...")
+
+# Raise exception if fastq files are a mixture of gzipped and non-gzipped files
+if len(gzfiles) > 0 and len(gzfiles) != len(onlyfiles):
+	myinput = "You have a mixture of gzipped files and non-gzipped files\nOnly {} of total {} files are gzipped!"
+	raise NameError(print(myinput.format(len(gzfiles), len(onlyfiles))))
+
+# Unify fastq file endings and return the final ending to be used.
+if len(gzfiles) > 0:
+	R1_file_ending, R2_file_ending, onlyfiles, gzfiles, = fix_input_files(".gz", gzfiles)
+	suffix = ".gz"
+else:
+	R1_file_ending, R2_file_ending, onlyfiles, gzfiles = fix_input_files("", onlyfiles)
+	suffix = ""
+
+sample_string = myfastqpath + "{sample}" + R1_file_ending + suffix
+SAMPLES, = glob_wildcards(sample_string)
+
+# Check the file pairing
+# Raise exception for non-paired PE files
+if config["type"] == "single":
+	print("You have chosen to use single-end reads\nRead pairing not being checked...")
+elif config["type"] == "paired":
+	len_r1 = len([i for i in onlyfiles if i.endswith(R1_file_ending + suffix)])
+	if len_r1*2 != len(onlyfiles):
+		myinput = "One or more samples do not have a read pair!\nIf using paired-end samples, please ensure each sample has read 1 and read 2 files\nAborting..."
+		raise NameError(myinput) # Raise exception to break workflow
+else:
+	myinput = "You have specified unknown read type: " + config["type"] + "\nPlease specify either \"paired\" or \"single\" in the config.yaml file, then rerun the pipeline."
+	raise NameError(myinput)
+
+# Snakemake rules for pre-processing steps of RNAseq or ChIPseq
+rule all :
+	input:  
+		expand('output/bam/{sample}.bam', sample=SAMPLES)
+
+config["suffix"] = suffix
+
+if config["type"] == "paired" :
+	rule trim_fastq_fastqc:
+		input :
+			pair1 = create_inputs(config)[0],
+			pair2 = create_inputs(config)[1]
+		output:
+			trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+			trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz",
+			fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+			fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"			
+		log:
+			"output/logs/{sample}.trim_adapters.log"
+		params:
+			config["suffix"]
+		run:
+			shell("mkdir -p output/temp_dir")
+			shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+			shell("cp {input.pair2} output/temp_dir/{wildcards.sample}_R2.fq{params}")
+			shell("trim_galore output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} --paired -o ./output/trim_fastq")
+			shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} -o ./output/fastqc")
+			shell("mv output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
+			shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+
+
+	rule fastq_to_bam:
+		input:
+			trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+			trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
+		params:
+			index = config["index"]
+		output:
+			bam = "output/bam/{sample}.bam",
+			bambai = "output/bam/{sample}.bam.bai"
+		threads: config["threads_for_alignment"]
+		log:
+			"output/logs/{sample}.alignment.log"
+		run:
+			shell("hisat2 -p {threads} -x {params.index} -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} -S output/bam/{wildcards.sample}.sam 2> {log}"),
+			shell("samtools sort output/bam/{wildcards.sample}.sam | samtools view -bS - > {output.bam}"),
+			shell("samtools index {output.bam}")
+			shell("rm output/bam/{wildcards.sample}.sam")
+			if config["keep_fastq"] == "FALSE" :
+				shell("rm {input.trimmed_pair1} {input.trimmed_pair2}")
+
+elif config["type"] == "single" :
+	rule trim_fastq_fastqc:
+		input :
+			pair1 = create_inputs(config)[0]
+		output:
+			trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+			fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip"		
+		log:
+			"output/logs/{sample}.trim_adapters.log"
+		params:
+			config["suffix"]
+		run:
+			shell("mkdir -p output/temp_dir")
+			shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+			shell("trim_galore output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/trim_fastq"),
+			shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/fastqc")
+
+	rule fastq_to_bam:
+		input:
+			trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz"
+		params:
+			index = config["index"]
+		output:
+			bam = "output/bam/{sample}.bam",
+			bambai = "output/bam/{sample}.bam.bai"
+		threads: config["threads_for_alignment"]
+		log:
+			"output/logs/{sample}.alignment.log"
+		run:
+			shell("hisat2 -p {threads} -x {params.index} -U {input.trimmed_pair1} -S output/bam/{wildcards.sample}.sam 2> {log}"),
+			shell("samtools sort output/bam/{wildcards.sample}.sam | samtools view -bS - > {output.bam}"),
+			shell("rm output/bam/{wildcards.sample}.sam"),
+			shell("samtools index {output.bam}")
+			if config["keep_fastq"] == "FALSE" :
+				shell("rm {input.trimmed_pair1}")
