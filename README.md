@@ -32,9 +32,8 @@ Copy the config.yaml, run_snakemake.sh and Snakefile to your NGS project directo
 │   ├── D1-WC_S2_L003_R1_001.fastq.gz
 │   └── D1-WC_S2_L003_R2_001.fastq.gz
 ├── run_snakemake.sh
-├── Snakefile_CR_preprocessing (required for Cut&Run)
-├── Snakefile_RNAandCHIP_preprocessing (required for RNA-seq and ChIPseq)
-└── Snakefile (required for all analyses)
+├── ngs_helper.py
+└── Snakefile
 ```
 Make the required changes to the config.yaml file.
 
@@ -51,8 +50,7 @@ Copy the config.yaml, run_snakemake_cluster.sh, cluster.json and Snakefile to yo
 │   ├── negD1-WC-40_S2_L003_R1_001.fastq.gz
 │   └── negD1-WC-40_S2_L003_R2_001.fastq.gz
 ├── run_snakemake_cluster.sh
-├── Snakefile_CR_preprocessing (required for Cut&Run)
-├── Snakefile_RNAandCHIP_preprocessing (required for RNA-seq and ChIPseq)
+├── ngs_helper.py
 └── Snakefile (required for all analyses)
 ```
 Make the required changes to the config.yaml and cluster.json file.
