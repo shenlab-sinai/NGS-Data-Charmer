@@ -1,188 +1,45 @@
 import os
+import sys
 from os import listdir
 from os.path import isfile, join
 import re
 from Bio import SeqIO
 import gzip
+from collections import Counter
+# HELPER FUNCTIONS
+# Import the functions
+sys.path.append(os.getcwd())
+import ngs_helper 
+
 
 configfile: "config.yaml"
 myfastqpath = "fastq/"
 
 # HELPER FUNCTIONS
-
-# Create the pattern of file endings
-
-def create_endings(x):
-	"""
-	Returns a list of likely fastq file endings
-
-	Input Parameter: 
-	x (int): Either 1 or 2, indicating the forward (1) or reverse (2) read.
-
-	Returns: 
-	list: A list of strings, representing the file endings a user might use for denoting their fastq files.
-	"""
-	return(["_R" + str(x) + "_001.fastq", "_R" + str(x) + "_001.fq", "_R" + str(x) + ".fastq", "_R" + str(x) + ".fq", "_" + str(x) + ".fastq", "_" + str(x) + ".fq", ".R" + str(x) + "_001.fastq", ".R" + str(x) + "_001.fq", ".R" + str(x) + ".fastq", ".R" + str(x) + ".fq", "." + str(x) + ".fastq", "." + str(x) + ".fq", "_r" + str(x) + "_001.fastq", "_r" + str(x) + "_001.fq", "_r" + str(x) + ".fastq", "_r" + str(x) + ".fq", ".r" + str(x) + "_001.fastq", ".r" + str(x) + "_001.fq", ".r" + str(x) + ".fastq", ".r" + str(x) + ".fq"])
-
-# Function to list the fastq files present in the fastq folder
-def getfilelist(myfastqpath):
-	"""
-	Extracts fastq files from the list of files present in your fastq directory.
-
-	Input Parameter: 
-	myfastqpath (string): directory containing your fastq files.
-	
-	Returns:
-	list: List containing two strings. 
-	1st string is all non-metadata files in the fastq directory
-	2nd string is all non-metadata files ending in '.gz'
-	"""
-	onlyfiles = [f for f in listdir(myfastqpath) if isfile(join(myfastqpath, f))]
-	onlyfiles = [i for i in onlyfiles if i.endswith((".fastq", ".fq", ".fastq.gz", ".fq.gz"))]
-	gzfiles = [i for i in onlyfiles if i.endswith((".gz"))]
-	return([onlyfiles, gzfiles])
-
-# Unify fastq files to single file ending
-def fix_input_files(file_suffix, input_fileset):
-	"""
-	Renames mixed input fastq files to the most common file ending and returns the selected file ending. NOTE: This step permenantly renames your fastq files from their original file ending. 
-
-	Input Parameter: 
-	file_suffix (string): ".gz" or ""; Gzipped fastq files are expected to end with the suffix ".gz". If files are NOT gzipped, the input is "".
-	
-	input_fileset (list): List of fastq file names to be examined. As written, gzipped files are listed within the variable 'gzfiles' and non-gzipped files are listed within the variable 'onlyfiles'.
-
-	Returns: 
-	list: A list containing four strings, the selected Read1 (forward read) file ending and the corresponding Read2 (reverse read) file ending, a list of all fastq-like files, and a list of gzipped fastq-like files.
-	"""
-	# Create the series of fastq file endings to search
-	base_endings_r1 = create_endings(1)
-	base_endings_r2 = create_endings(2)
-	ending_dictionary = dict(zip(base_endings_r1, base_endings_r2))  # Define the R1 and R1 suffix pairs for reference
-	mylist = list()  # Create empty list 
-	for x in base_endings_r1:  # first traverse the R1 base endings to find the common ending
-		matched_ends = [i for i in input_fileset if i.endswith(x + file_suffix)]
-		if(len(matched_ends) > 0):
-			mylist.append((x, len(matched_ends)))
-
-	if len(mylist) == 0:  # Contingency: if all samples are single-end and do not have a common forward read ending
-		print("Your dataset appears to be entirely single-end files.")
-		odd_files = [i for i in input_fileset if i.endswith(".fq" + file_suffix)]
-		if len(odd_files) > 0:
-			oldnames = odd_files
-			old_rep = [i.replace(".fq" + suffix, ".fastq" + suffix) for i in oldnames]
-			[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
-		# Re-assess and return filenames
-		return([".fastq", ".fastq", getfilelist(myfastqpath)[0], getfilelist(myfastqpath)[1]])
-
-	else:  # If R1 endings are present, check values and correct file names
-		mylist_dict = {key: value for (key, value) in mylist}  # create dictionary of mixed file endings
-		myR1_suffix = [key for (key, value) in mylist_dict.items() if value == max(mylist_dict.values())][0]
-		myR2_suffix = ending_dictionary[myR1_suffix]
-		mylist_dict.pop(myR1_suffix)  # remove main R1 suffix from dictionary
-		if len(mylist_dict) > 0:  # begin processing forward reads
-			for x in mylist_dict:
-				oldnames = [i for i in input_fileset if i.endswith(x + file_suffix)]
-				old_rep = [i.replace(x, myR1_suffix) for i in oldnames]
-				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
-
-		mylist = list()  # Create empty list 
-		for x in base_endings_r2:  # first traverse the R2 base endings to find the common ending
-			matched_ends = [i for i in input_fileset if i.endswith(x + file_suffix)]
-			if(len(matched_ends) > 0):
-				mylist.append(x)
-		mylist.remove(myR2_suffix)  # remove main R2 suffix from list
-		if len(mylist) > 0:  # begin processing forward reads
-			for x in mylist:
-				oldnames = [i for i in input_fileset if i.endswith(x + file_suffix)]
-				old_rep = [i.replace(x, myR2_suffix) for i in oldnames]
-				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
-
-		#Re-assess file names
-		if file_suffix == ".gz":
-			input_fileset = getfilelist(myfastqpath)[1]
-		else:
-			input_fileset = getfilelist(myfastqpath)[0]
-
-		# Now process single end files
-		odd_files = [i for i in [i for i in input_fileset if not i.endswith(myR1_suffix + file_suffix)] if not i.endswith(myR2_suffix + file_suffix)]
-		fastq_odd_1 = [i for i in odd_files if i.endswith(".fastq" + file_suffix)]
-		fastq_odd_2 = [i for i in odd_files if i.endswith(".fq" + file_suffix)]
-		if len(odd_files) > 0:
-			print("Now unifying " + str(len(odd_files)) + " single-end files to \""+ myR1_suffix + file_suffix + "\" ending")
-			if len(fastq_odd_1) > 0:  # rename files to correct ending
-				oldnames = odd_files
-				old_rep = [i.replace(".fastq" + file_suffix, myR1_suffix + file_suffix) for i in oldnames]
-				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
-			if len(fastq_odd_2) > 0:  # rename files to correct ending
-				oldnames = odd_files
-				old_rep = [i.replace(".fq" + file_suffix, myR1_suffix + file_suffix) for i in oldnames]
-				[os.rename(join(myfastqpath, i),join(myfastqpath, y)) for i, y in zip(oldnames, old_rep)]
-		# Re-assess and return filenames and file endings
-		return([myR1_suffix, myR2_suffix, getfilelist(myfastqpath)[0], getfilelist(myfastqpath)[1]])
-
-# Function to retrieve and check cut&run read lengths
-def check_readlength(suffix, input_fileset):
-	"""
-	When samples are specified to be cut&run:
-	Samples the first read in each forward read file and extracts the read length. 
-	Checks if the samples have different read lengths.
-
-	Input Parameter: 
-	suffix (string): ".gz" or ""; Gzipped fastq files are expected to end with the suffix ".gz". If files are NOT gzipped, the input is "".
-	
-	input_fileset (list): List of fastq file names to be examined. As written, gzipped files are listed within the variable 'gzfiles' and non-gzipped files are listed within the variable 'onlyfiles'.
-
-	
-	Returns:
-	list: List containing two integers. 
-	1st integer is the read length
-	2nd integer is the read length, minus one
-	"""
-	my_cr_files = [i for i in input_fileset if i.endswith(R1_file_ending + suffix)]
-	if suffix == ".gz":
-		try:  # Extract the read length of first forward read
-			read_len_list = [len(next(SeqIO.parse(gzip.open(join(myfastqpath, i), "rt"), "fastq")).seq) for i in my_cr_files]
-			dedup_lengths = list(dict.fromkeys(read_len_list))
-		except:
-			raise NameError("One of your fastq files may be empty\nNow aborting...")
-	elif suffix == "": 
-		try:
-			read_len_list = [len(next(SeqIO.parse(join(myfastqpath, i), "fastq")).seq) for i in my_cr_files]
-			dedup_lengths = list(dict.fromkeys(read_len_list))
-		except:
-			raise NameError("One of your fastq files may be empty\nNow aborting...")
-
-	if len(dedup_lengths) > 1:
-		raise NameError("Based on sampling the first read of each R1 fastq file, your cut&run files have different read lengths!\nRecorded lengths:"+ ("elements in the list are "+', '.join(['%.f']*len(dedup_lengths))) % tuple(dedup_lengths) + " base pairs" + "\nAborting...")
-	else:
-		print("Congratulations, your cut&run fastq files appear to have uniform sequence lengths!\nProceeding with a read length of " + format(dedup_lengths[0]))
-		return(dedup_lengths[0], dedup_lengths[0]-1)
-
 # Create function for creating rule sets
 def choose_rule_all(config):
-	"""
-	Selects the input needed for 'rule all' in snakemake pipeline
+ """
+ Selects the input needed for 'rule all' in snakemake pipeline
 
-	Input Parameter: 
-	config (dict): Dictionary derived from config.yaml and any additional key:value pairs added during the file preperation steps. 
+ Input Parameter: 
+ config (dict): Dictionary derived from config.yaml and any additional key:value pairs added during the file preperation steps. 
 
-	Returns:
-	list: List of required input files for 'rule all'. 
-	"""
-	myout = []
-	if config["to_multiqc"] == "TRUE":
-		myout.append("output/multiqc_report.html")
-	if config["to_bw"] == "TRUE" and config["experiment"] != "rnaseq":
-		myout.append(expand('output/bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES))
-	if config["to_bed"] == "TRUE" and config["experiment"] != "rnaseq":
-		myout.append(expand('output/bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES))
-	if config["to_tdf"] == "TRUE" and config["experiment"] != "rnaseq":
-		myout.append(expand('output/tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES))
-	if config["experiment"] == "rnaseq":
-		myout.append("output/htseq_counts_matrix.txt")
-	# myout.append(expand('output/trim_fastq/{sample}_R1_001_trimmed.fq.gz', sample=SAMPLES))
-	return(myout)
+ Returns:
+ list: List of required input files for 'rule all'. 
+ """
+ myout = []
+ if config["to_multiqc"] == "TRUE":
+  myout.append("output/multiqc_report.html")
+ if config["to_bw"] == "TRUE" and config["experiment"] != "rnaseq":
+  myout.append(expand('output/bw/{sample}.unique.sorted.rmdup.chr.bw', sample=SAMPLES))
+ if config["to_bed"] == "TRUE" and config["experiment"] != "rnaseq":
+  myout.append(expand('output/bed/{sample}.unique.sorted.rmdup.chr.bed', sample=SAMPLES))
+ if config["to_tdf"] == "TRUE" and config["experiment"] != "rnaseq":
+  myout.append(expand('output/tdf/{sample}.unique.sorted.rmdup.tdf', sample=SAMPLES))
+ if config["experiment"] == "rnaseq":
+  myout.append("output/htseq_counts_matrix.txt")
+ # myout.append(expand('output/trim_fastq/{sample}_R1_001_trimmed.fq.gz', sample=SAMPLES))
+ return(myout)
 
 # Create read-pair inputs for sample processing
 def create_inputs(config) :
@@ -197,14 +54,13 @@ def create_inputs(config) :
 	1st string denotes the forward read
 	2nd string denotes the reverse read
 	"""
-	return([("fastq/{sample}" + expand("{ending}{suffix}",ending=R1_file_ending,suffix=suffix)[0]+""),("fastq/{sample}" + expand("{ending}{suffix}",ending=R2_file_ending,suffix=suffix)[0]+"")])
+	return([("fastq/{sample}" + expand("{ending}{suffix}",ending=R1_file_ending,suffix=suffix)[0]+""),
+		("fastq/{sample}" + expand("{ending}{suffix}",ending=R2_file_ending,suffix=suffix)[0]+"")])
 
-# END HELPER FUNCTIONS
-
+#####End helper functions
 
 # Retrieve the list of fastq files
-onlyfiles = getfilelist(myfastqpath)[0]
-gzfiles = getfilelist(myfastqpath)[1]
+onlyfiles,gzfiles = ngs_helper.getfilelist(myfastqpath)
 
 # Raise exception if no fastq files present
 if len(gzfiles) == 0 and len(onlyfiles) == 0:
@@ -217,10 +73,10 @@ if len(gzfiles) > 0 and len(gzfiles) != len(onlyfiles):
 
 # Unify fastq file endings and return the final ending to be used.
 if len(gzfiles) > 0:
-	R1_file_ending, R2_file_ending, onlyfiles, gzfiles, = fix_input_files(".gz", gzfiles)
+	R1_file_ending, R2_file_ending, onlyfiles, gzfiles = ngs_helper.fix_input_files(".gz", gzfiles, myfastqpath)
 	suffix = ".gz"
 else:
-	R1_file_ending, R2_file_ending, onlyfiles, gzfiles = fix_input_files("", onlyfiles)
+	R1_file_ending, R2_file_ending, onlyfiles, gzfiles = ngs_helper.fix_input_files("", onlyfiles, myfastqpath)
 	suffix = ""
 
 sample_string = myfastqpath + "{sample}" + R1_file_ending + suffix
@@ -239,6 +95,12 @@ else:
 	myinput = "You have specified unknown read type: " + config["type"] + "\nPlease specify either \"paired\" or \"single\" in the config.yaml file, then rerun the pipeline."
 	raise NameError(myinput)
 
+# Retrieve cut&run read lengths for use as parameters
+if len(gzfiles) > 0 and config["experiment"] == "cutrun":
+	config["read_length"], config["read_length_max"] = ngs_helper.check_readlength(suffix, gzfiles, R1_file_ending, myfastqpath)
+elif len(gzfiles) == 0 and config["experiment"] == "cutrun":
+	config["read_length"], config["read_length_max"] = ngs_helper.check_readlength(suffix, onlyfiles, R1_file_ending, myfastqpath)
+
 # Generate input rule for Snakemake
 print(choose_rule_all(config))
 
@@ -246,19 +108,143 @@ rule all :
 	input:  
 		choose_rule_all(config)
 
-# Begin Snakemake pre-processing for Cut&Run samples
-
-subworkflow cutrun_preprocess:
-	snakefile:
-		"Snakefile_CR_preprocessing"
-	configfile:
-		"config.yaml"
+config["suffix"] = suffix
 
 if config["experiment"] == "cutrun" :
+	# Begin Snakemake pre-processing for Cut&Run samples
+	if config["type"] == "paired":
+		rule trim_fastq_fastqc:
+			input :
+				pair1 = (join(myfastqpath, "{sample}") + expand("{ending}{suffix}",ending=R1_file_ending,suffix=suffix)[0]),
+				pair2 = (join(myfastqpath, "{sample}") + expand("{ending}{suffix}",ending=R2_file_ending,suffix=suffix)[0])
+			output:
+				trimmed_pair1 = temp("output/trim_fastq/{sample}_R1_val_1.fq.gz"),
+				trimmed_pair2 = temp("output/trim_fastq/{sample}_R2_val_2.fq.gz"),
+				fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+				fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip" 
+			log:
+				"output/logs/{sample}.trim_adapters.log"
+			params:
+				config["suffix"]
+			run:
+				# mv files to R1 and R2 ending in temporary directory
+				shell("mkdir -p output/temp_dir")
+				shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+				shell("cp {input.pair2} output/temp_dir/{wildcards.sample}_R2.fq{params}")
+				shell("trim_galore --gzip output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} --paired -o ./output/trim_fastq")
+				shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} -o ./output/fastqc")
+
+	if config["type"] == "single" :
+		rule trim_fastq_fastqc :
+			input :
+				pair1 = create_inputs(config)[0]
+			output:
+				trimmed_pair1 = temp("output/trim_fastq/{sample}_R1_val_1.fq.gz"),
+				trimmed_pair2 = temp("output/trim_fastq/{sample}_R2_val_2.fq.gz"),
+				fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+				fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip" 
+			log:
+				"output/logs/{sample}.trim_adapters.log"
+			params:
+				config["suffix"]
+			run:
+				# mv files to R1 and R2 ending in temporary directory
+				shell("mkdir -p output/temp_dir")
+				shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+				shell("trim_galore --gzip output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/trim_fastq --basename {wildcards.sample}")
+				shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
+				shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/fastqc")
+				# shell("mv output/fastqc/{wildcards.sample}_R1_fastqc.zip output/fastqc/{wildcards.sample}_R1_fastqc.zip")
+				shell("touch {output.trimmed_pair2}")
+				shell("touch {output.fastqc_zipfile2}")
+
+	rule split_length_long:
+		input:
+			trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
+			trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
+		output:
+			cut_r1_p1 = temp("output/trim_fastq/{sample}_t1_R1.len75.fastq"),
+			cut_r2_p1 = temp("output/trim_fastq/{sample}_t1_R2.len75.fastq")
+		params:
+			read_length = config["read_length"]
+		log:
+			"output/logs/{sample}.split_length_keeplong.log"
+		run:
+			if config["type"] == "paired" :
+				shell("cutadapt --minimum-length {params.read_length} -o {output.cut_r1_p1} {input.trimg_pair1}"),
+				shell("cutadapt --minimum-length {params.read_length} -o {output.cut_r2_p1} {input.trimg_pair2}")
+			else :
+				shell("cutadapt --minimum-length {params.read_length} -o {output.cut_r1_p1} {input.trimg_pair1}")
+				shell("touch {output.cut_r2_p1}")
+				shell("rm output/fastqc/{wildcards.sample}_R2_fastqc.zip") 
+
+	rule split_length_short:
+		input:
+			trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
+			trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
+		output:
+			cut_r1_p2 = temp("output/trim_fastq/{sample}_t1_R1.lt75.fastq"),
+			cut_r2_p2 = temp("output/trim_fastq/{sample}_t1_R2.lt75.fastq")
+		params:
+			read_length = config["read_length_max"]
+		log:
+			"output/logs/{sample}.split_length_keepshort.log"
+		run:
+			if config["type"] == "paired" :
+				shell("cutadapt --maximum-length {params.read_length} -o {output.cut_r1_p2} {input.trimg_pair1}"),
+				shell("cutadapt --maximum-length {params.read_length} -o {output.cut_r2_p2} {input.trimg_pair2}")
+			else :
+				shell("cutadapt --maximum-length {params.read_length} -o {output.cut_r1_p2} {input.trimg_pair1}")
+				shell("touch {output.cut_r2_p2}")
+
+	rule trim_long:
+		input:
+			cut_r1_p1 = "output/trim_fastq/{sample}_t1_R1.len75.fastq",
+			cut_r2_p1 = "output/trim_fastq/{sample}_t1_R2.len75.fastq"
+		output:
+			cut_r1_p3 = temp("output/trim_fastq/{sample}_t1_R1.len75_trim.fastq"),
+			cut_r2_p3 = temp("output/trim_fastq/{sample}_t1_R2.len75_trim.fastq")
+		log:
+			"output/logs/{sample}.trim_long.log"
+		run:
+			if config["type"] == "paired" :
+				shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}"),
+				shell("cutadapt -u -6 -o {output.cut_r2_p3} {input.cut_r2_p1}")
+			else :
+				shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}")
+				shell("touch {output.cut_r2_p3}")
+
+
+	rule combine_split_lengths:
+		input:
+			cut_r1_p3 = "output/trim_fastq/{sample}_t1_R1.len75_trim.fastq",
+			cut_r2_p3 = "output/trim_fastq/{sample}_t1_R2.len75_trim.fastq",
+			cut_r1_p2 = "output/trim_fastq/{sample}_t1_R1.lt75.fastq",
+			cut_r2_p2 = "output/trim_fastq/{sample}_t1_R2.lt75.fastq"
+		output:
+			cut_r1_p4 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+			cut_r2_p4 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"		
+		run:
+			if config["type"] == "paired" :
+				shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
+				shell("cat {input.cut_r2_p3} {input.cut_r2_p2} > output/trim_fastq/{wildcards.sample}_t2_R2.fastq"),
+				shell("cat output/trim_fastq/{wildcards.sample}_t2_R1.fastq | paste - - - - | sort -k1,1 -t \" \" | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+				shell("cat output/trim_fastq/{wildcards.sample}_t2_R2.fastq | paste - - - - | sort -k1,1 -t \" \" | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+				shell("gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+				shell("gzip output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+				shell("rm output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
+				shell("rm output/trim_fastq/{wildcards.sample}_t2_R2.fastq")
+			else :
+				shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
+				shell("gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
+				shell("touch {output.cut_r2_p4}")
+	# end pre-processing for cut and run samples
+
+	# Alignment for cut and run samples
 	rule bowtie2:
 		input:
-			trimmed_pair1 = cutrun_preprocess("output/trim_fastq/{sample}_R1_trimmed.fq.gz"),
-			trimmed_pair2 = cutrun_preprocess("output/trim_fastq/{sample}_R2_trimmed.fq.gz")
+			trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+			trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
 		params:
 			index = config["bowtie2_index"]
 		output:
@@ -294,6 +280,7 @@ if config["experiment"] == "cutrun" :
 				shell("rm output/bam/{wildcards.sample}.bam")
 				shell("rm output/bam/{wildcards.sample}.bam.bai")
 
+	# This rule removes duplicate alignments from Cut and Run samples
 	rule rmdup:
 		input:
 			"output/bam/{sample}.sorted.bam"
@@ -307,17 +294,98 @@ if config["experiment"] == "cutrun" :
 			shell("samtools index {output.bam}")
 
 
+
+# Pre-process RNA-seq or Chip-seq samples
 if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
-	subworkflow RNAandCHIP_preprocess:
-		snakefile:
-			"Snakefile_RNAandCHIP_preprocessing"
-		configfile:
-			"config.yaml"
+	if config["type"] == "paired" :
+		# Trim adaptors from paired-end fastq files
+		rule trim_fastq_fastqc:
+			input :
+				pair1 = create_inputs(config)[0],
+				pair2 = create_inputs(config)[1]
+			output:
+				trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+				trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz",
+				fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+				fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"			
+			log:
+				"output/logs/{sample}.trim_adapters.log"
+			params:
+				config["suffix"]
+			run:
+				shell("mkdir -p output/temp_dir")
+				shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+				shell("cp {input.pair2} output/temp_dir/{wildcards.sample}_R2.fq{params}")
+				shell("trim_galore output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} --paired -o ./output/trim_fastq")
+				shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} output/temp_dir/{wildcards.sample}_R2.fq{params} -o ./output/fastqc")
+				shell("mv output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
+				shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+
+		# Align paired-end trimmed reads to genome 
+		rule fastq_to_bam:
+			input:
+				trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+				trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
+			params:
+				index = config["index"]
+			output:
+				bam = "output/bam/{sample}.bam",
+				bambai = "output/bam/{sample}.bam.bai"
+			threads: config["threads_for_alignment"]
+			log:
+				"output/logs/{sample}.alignment.log"
+			run:
+				shell("hisat2 -p {threads} -x {params.index} -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} -S output/bam/{wildcards.sample}.sam 2> {log}"),
+				shell("samtools sort output/bam/{wildcards.sample}.sam | samtools view -bS - > {output.bam}"),
+				shell("samtools index {output.bam}")
+				shell("rm output/bam/{wildcards.sample}.sam")
+				if config["keep_fastq"] == "FALSE" :
+					shell("rm {input.trimmed_pair1} {input.trimmed_pair2}")
+
+	elif config["type"] == "single" :
+		# Trim adaptors from single-end fastq files
+		rule trim_fastq_fastqc:
+			input :
+				pair1 = create_inputs(config)[0]
+			output:
+				trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+				fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip"		
+			log:
+				"output/logs/{sample}.trim_adapters.log"
+			params:
+				config["suffix"]
+			run:
+				shell("mkdir -p output/temp_dir")
+				shell("cp {input.pair1} output/temp_dir/{wildcards.sample}_R1.fq{params}")
+				shell("trim_galore output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/trim_fastq"),
+				shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} -o ./output/fastqc")
+
+		# Align trimmed single-end reads to genome 
+		rule fastq_to_bam:
+			input:
+				trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz"
+			params:
+				index = config["index"]
+			output:
+				bam = "output/bam/{sample}.bam",
+				bambai = "output/bam/{sample}.bam.bai"
+			threads: config["threads_for_alignment"]
+			log:
+				"output/logs/{sample}.alignment.log"
+			run:
+				shell("hisat2 -p {threads} -x {params.index} -U {input.trimmed_pair1} -S output/bam/{wildcards.sample}.sam 2> {log}"),
+				shell("samtools sort output/bam/{wildcards.sample}.sam | samtools view -bS - > {output.bam}"),
+				shell("rm output/bam/{wildcards.sample}.sam"),
+				shell("samtools index {output.bam}")
+				if config["keep_fastq"] == "FALSE" :
+					shell("rm {input.trimmed_pair1}")
+	# Common pre-processing of ChiP-seq and RNA-seq reads complete
 
 	if config["experiment"] == "chipseq":
-		rule bam_to_unique_mapped:	##Remove the multimapped reads and sort
+		# Remove and sort the multimapped reads from ChIP-seq samples
+		rule bam_to_unique_mapped:
 			input:
-				RNAandCHIP_preprocess("output/bam/{sample}.bam")
+				"output/bam/{sample}.bam"
 			output:
 				bam = temp("output/bam/{sample}.sorted.bam")
 			run:
@@ -332,6 +400,7 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
 				if config["keep_unfiltered_bam"] == "FALSE" :
 					shell("rm output/bam/{wildcards.sample}.bam output/bam/{wildcards.sample}.bam.bai")
 
+		# Remove duplicate reads from ChIP-seq samples
 		rule sortedbam_to_rmdup:
 			input:
 				sorted_bam = "output/bam/{sample}.sorted.bam"
@@ -345,9 +414,10 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
 					shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")			
 
 	elif config["experiment"] == "rnaseq" and config["type"] == "paired" :
+		# Remove duplicate reads from paired-end RNA-seq samples
 		rule sortedbam_to_rmdup:
 			input:
-				RNAandCHIP_preprocess("output/bam/{sample}.bam")
+				"output/bam/{sample}.bam"
 			output:
 				"output/bam/{sample}.sorted.rmdup.bam"
 			log:
@@ -358,9 +428,10 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
 					shell("rm -f {input} {input}.bai")
 
 	elif config["experiment"] == "rnaseq" and config["type"] == "single" :
+		# Sort reads from single-end RNA-seq samples
 		rule sortedbam_to_rmdup:
 			input:
-				RNAandCHIP_preprocess("output/bam/{sample}.bam")
+				"output/bam/{sample}.bam"
 			output:
 				"output/bam/{sample}.sorted.bam"
 			log:
@@ -370,6 +441,8 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
 				if config["keep_unfiltered_bam"] == "FALSE" :
 					shell("rm -f {input} {input}.bai")
 
+# Additional rules for ChIP-seq
+# Create TDF files 
 rule rmdup_to_tdf:
 	input:
 		dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
@@ -383,6 +456,7 @@ rule rmdup_to_tdf:
 		"igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
 		"2> {log}"
 
+# Eliminate extraneous chromosomes from bam file
 rule rmdup_to_chrbam:
 	input:
 		dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
@@ -395,6 +469,7 @@ rule rmdup_to_chrbam:
 		shell("samtools view -H {input.dup_removed} | sed -e \"s/SN:\([0-9XY]\)/SN:chr\\1/\" -e \"s/SN:MT/SN:chrM/\" | samtools reheader - {input.dup_removed} > {output.chrbam}")
 		shell("samtools index {output.chrbam}")
 
+# Create bigwig from bam file (main chromosomes only)
 rule chrbam_to_bw:
 	input:
 		chrbam = "output/bam/{sample}.unique.sorted.rmdup.chr.bam",
@@ -406,6 +481,7 @@ rule chrbam_to_bw:
 	run:
 		shell("bamCoverage -b {input.chrbam} -o {output.bw_file} --binSize 10 --normalizeUsing RPKM")
 
+# Create bed file from bam file (main chromosomes only)
 rule chrbam_to_bed:
 	input:
 		chrbam = "output/bam/{sample}.unique.sorted.rmdup.chr.bam"
@@ -416,7 +492,7 @@ rule chrbam_to_bed:
 	shell:
 		"bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 							
-# rnaseq
+# Create counts files for RNA-seq
 config["gene_scheme"] = "-t gene" ## or "-g gene_id"
 rule sortedbam_to_counts:
 	input:
@@ -442,6 +518,7 @@ rule sortedbam_to_counts:
 		elif config["count_scheme"] == "count_uniq" and config["type"] == "single" :
 			shell("featureCounts {params.gene_scheme} -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
 
+# Compile counts for RNA-seq
 rule counts_matrix:
 	input:
 		counts = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
@@ -471,7 +548,7 @@ rule counts_matrix:
 		dataframe = pd.DataFrame(dict_of_counts)
 		dataframe.to_csv(output[0], sep = '\t')			
 
-# multiqc
+# Create multiqc report for RNA-seq
 if config["experiment"] == "rnaseq":
 	rule run_multiqc:
 		input:
@@ -483,6 +560,7 @@ if config["experiment"] == "rnaseq":
 		shell:
 			"multiqc . -f --config {params.multiqc_config}"
 
+# Create multiqc report for ChIP-seq and Cut&Run samples
 elif config["experiment"] == "chipseq" or config["experiment"] == "cutrun" :
 	rule run_multiqc:
 		input:

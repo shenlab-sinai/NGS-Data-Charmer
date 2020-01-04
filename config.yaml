@@ -4,7 +4,7 @@ type: "paired" # single or paired
 
 experiment: "chipseq" # chipseq or rnaseq or cutrun
 
-threads_for_alignment: 4
+threads_for_alignment: 4 # May be increased to speed up alignment
 
 index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
@@ -14,15 +14,15 @@ multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer-COPY/multiqc_config_template.yaml
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10_chr_len" # path to chr.sizes file (only for chipseq)
+
 # ONLY FOR RNASEQ -
-#gtf: "/sc/hydra/work/estilm01/hisat_genome/UCSC_mm10_compGENCODE22.gtf" # path to gtf file 
 gtf: "/path/to/gencode.vM22.annotation.gtf"
 count_scheme: "fraction" # fraction or count_all or count_uniq
 
 # OUTPUT options
-keep_fastq: "TRUE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
-keep_unfiltered_bam: "TRUE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
-to_tdf: "TRUE" # Stop after producing TDF file
-to_bed: "TRUE" # Stop after producing bed file
-to_bw: "TRUE" # Stop after producing bigwig of reads from main chromsomes
+keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
+keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
+to_tdf: "TRUE" # Produce TDF files
+to_bed: "TRUE" # Produce bed files
+to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
 to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
