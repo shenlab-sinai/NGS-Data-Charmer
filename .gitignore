@@ -6,7 +6,9 @@
 *.ht2
 *.log
 *.fastq.gz
+*.sublime-*
 processed
+output
 fastqc
 logs
 nohup.out
