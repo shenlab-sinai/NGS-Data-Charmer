@@ -12,6 +12,8 @@ bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 inde
 
 multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer-COPY/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
+ngs_path: "/path/to/Tools/NGS-Data-Charmer-COPY" # location of NGS-Data-Charmer folder
+
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
 # This file must named as follows "<genomeid>.chrom.sizes", any other filename format (e.g. "mm10_chr_len") will 

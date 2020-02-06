@@ -1,4 +1,3 @@
-import ngs_helper #provides the helper functions
 import os
 import sys
 from os import listdir
@@ -10,6 +9,8 @@ from collections import Counter
 
 configfile: "config.yaml"
 myfastqpath = "fastq/"
+sys.path.append(config["ngs_path"]) # needed to correctly find helper script
+import ngs_helper.ngs_helper as ngs_helper #provides the helper functions
 
 # HELPER FUNCTIONS
 # Create function for creating rule sets
@@ -122,8 +123,6 @@ elif len(gzfiles) == 0 and config["experiment"] == "cutrun":
     ngs_helper.check_readlength(suffix, onlyfiles, R1_file_ending, myfastqpath)
 
 # Generate input rule for Snakemake
-print(choose_rule_all(config))
-
 rule all:
     input:
         choose_rule_all(config)

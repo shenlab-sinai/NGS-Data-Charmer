@@ -24,7 +24,7 @@ The reason for this requirement is a failure of the conda environment to success
 
 ## Usage on a local machine:
 
-Copy the config.yaml, run\_snakemake.sh, ngs\_helper.py and Snakefile to your NGS project directory. This directory should also contain a directory called 'fastq' wherein all the fastq files are placed. Make sure the project directory structure is as follows:
+Copy the config.yaml, run\_snakemake.sh and Snakefile to your NGS project directory. This directory should also contain a directory called 'fastq' wherein all the fastq files are placed. Make sure the project directory structure is as follows:
 ```
 .
 ├── config.yaml
@@ -32,7 +32,6 @@ Copy the config.yaml, run\_snakemake.sh, ngs\_helper.py and Snakefile to your NG
 │   ├── D1-WC_S2_L003_R1_001.fastq.gz
 │   └── D1-WC_S2_L003_R2_001.fastq.gz
 ├── run_snakemake.sh
-├── ngs_helper.py
 └── Snakefile
 ```
 Make the required changes to the config.yaml file.
@@ -41,12 +40,11 @@ Finally, type `sh run_snakemake.sh` followed by the maximum number of CPU cores 
 
 ## Usage on an LSF cluser:
 
-Copy the config.yaml, run\_snakemake\_cluster.sh, cluster.json, ngs\_helper.py and Snakefile to your NGS project directory. This directory should also contain a directory called 'fastq' wherein all fastq files are placed. Make sure the project directory structure is as follows:
+Copy the config.yaml, run\_snakemake\_cluster.sh, cluster.json and Snakefile to your NGS project directory. This directory should also contain a directory called 'fastq' wherein all fastq files are placed. Make sure the project directory structure is as follows:
 ```
 .
 ├── cluster.json
 ├── config.yaml
-├── ngs_helper.py
 ├── fastq
 │   ├── negD1-WC-40_S2_L003_R1_001.fastq.gz
 │   └── negD1-WC-40_S2_L003_R2_001.fastq.gz
@@ -74,7 +72,6 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 .
 ├── cluster.json
 ├── config.yaml
-├── ngs_helper.py
 ├── fastq
 │   ├── negD1-WC-40_S2_L003_R1_001.fastq.gz
 │   └── negD1-WC-40_S2_L003_R2_001.fastq.gz
