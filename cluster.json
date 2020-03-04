@@ -9,7 +9,7 @@
         "jobname"      : "{rule}.{wildcards}",
         "output"    : "logs/{rule}.{wildcards}.o",
         "error"     : "logs/{rule}.{wildcards}.e",
-        "walltime"    : "00:10"
+        "walltime"    : "00:30"
     },
 
     "trim_fastq_fastqc" :
@@ -97,7 +97,8 @@
 
     "combine_split_lengths":
     {
-        "walltime"    : "0:20"
+        "memory"    : 24000,
+        "walltime"    : "2:00"
     },
 
     "sort_combined_lengths":
