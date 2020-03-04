@@ -282,11 +282,17 @@ if config["experiment"] == "cutrun":
                 shell("cat {input.cut_r2_p3} {input.cut_r2_p2} > \
                     output/trim_fastq/{wildcards.sample}_t2_R2.fastq"),
                 shell("cat output/trim_fastq/{wildcards.sample}_t2_R1.fastq \
-                    | paste - - - - | sort -k1,1 -t \" \" | tr \"\t\" \"\\n\" \
-                    > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+                    | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
+                shell("sort -k1,1 -T output/trim_fastq --parallel=20 -t \" \" \
+                    output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq \
+                    | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+                shell("rm output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
                 shell("cat output/trim_fastq/{wildcards.sample}_t2_R2.fastq \
-                    | paste - - - - | sort -k1,1 -t \" \" | tr \"\t\" \"\\n\" \
-                    > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+                    | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
+                shell("sort -k1,1 -T output/trim_fastq --parallel=20 -t \" \" \
+                    output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq \
+                    | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+                shell("rm output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
                 shell(
                     "gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
                 shell(
