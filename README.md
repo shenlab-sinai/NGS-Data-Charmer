@@ -112,6 +112,9 @@ Please note that input fastq file names that fail to conform to any of the expec
 
 You may want to retain the trimmed fastq files or unfiltered bam files. This is possible by modifying the "output" options in the configuration file to "TRUE" or "FALSE". 
 
+## Cut&Run note
+For very large Cut&Run sequencing runs, the walltime for the 'combine_split_lengths' may need to be increased. The 'combine_split_lengths' step does utilize parallel processing (4 threads) in order to speed up the read sorting. However, if you find that the pipeline fails at the 'combine_split_lengths', try increasing the walltime in the cluster.json file. 
+
 ## Test dataset
 
 A small example dataset, composed of two downsampled paired end Cut&Run samples, with 250K paired-end reads in each sample, are publically available for use: 
