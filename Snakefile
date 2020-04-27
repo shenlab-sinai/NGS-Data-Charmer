@@ -419,9 +419,15 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
             log:
                 "output/logs/{sample}.alignment.log"
             run:
-                shell("hisat2 -p {threads} -x {params.index} \
-                    -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} \
-                    -S output/bam/{wildcards.sample}.sam 2> {log}"),
+                if config["cufflinks_bam"] == "FALSE":
+                    shell("hisat2 -p {threads} -x {params.index} \
+                        -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} \
+                        -S output/bam/{wildcards.sample}.sam 2> {log}")
+                else:
+                    shell("hisat2 -p {threads} -x {params.index} \
+                        --pen-noncansplice 1000000 \
+                        -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} \
+                        -S output/bam/{wildcards.sample}.sam 2> {log}")                    
                 shell("samtools sort output/bam/{wildcards.sample}.sam | \
                     samtools view -bS - > {output.bam}"),
                 shell("samtools index {output.bam}")
@@ -469,9 +475,14 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
             log:
                 "output/logs/{sample}.alignment.log"
             run:
-                shell("hisat2 -p {threads} -x {params.index} \
-                    -U {input.trimmed_pair1} \
-                    -S output/bam/{wildcards.sample}.sam 2> {log}"),
+                if config["cufflinks_bam"] == "FALSE":
+                    shell("hisat2 -p {threads} -x {params.index} \
+                        -U {input.trimmed_pair1} \
+                        -S output/bam/{wildcards.sample}.sam 2> {log}")
+                else:
+                    shell("hisat2 -p {threads} -x {params.index} \
+                        --pen-noncansplice 1000000 -U {input.trimmed_pair1} \
+                        -S output/bam/{wildcards.sample}.sam 2> {log}")                    
                 shell("samtools sort output/bam/{wildcards.sample}.sam | \
                     samtools view -bS - > {output.bam}"),
                 shell("rm output/bam/{wildcards.sample}.sam"),
