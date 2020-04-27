@@ -1,4 +1,4 @@
-name: ngs_data_charmer
+name: ngs_data_charmer_copy
 
 channels:
   - conda-forge
@@ -20,3 +20,9 @@ dependencies:
   - trim-galore
   - deeptools
   - multiqc
+  - bowtie2
+  - cutadapt
+  - picard
+  - gmap
+  - samtools
+  - biopython

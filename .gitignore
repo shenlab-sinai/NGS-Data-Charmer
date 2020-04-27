@@ -1,12 +1,15 @@
 .DS_Store
 .snakemake
 .Rhistory
+__pycache__
 *.bam
 *.txt
 *.ht2
 *.log
 *.fastq.gz
+*.sublime-*
 processed
+output
 fastqc
 logs
 nohup.out
@@ -14,3 +17,4 @@ bed
 multiqc_data
 multiqc_report.html
 tdf
+Snakefile_fordag

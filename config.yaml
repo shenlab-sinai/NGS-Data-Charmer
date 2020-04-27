@@ -1,24 +1,34 @@
-# REQUIRED ARGUMENTS -
+#required arguments
 
 type: "paired" # single or paired
 
-experiment: "rnaseq" # chipseq or rnaseq
+experiment: "chipseq" # chipseq or rnaseq or cutrun
 
-threads_for_alignment: 4
+threads_for_alignment: 4 # May be increased to speed up alignment
 
-index: "/Users/Aarthi/resources/mm10_hisat2_index/genome" # path to basename of HISAT2 index
+index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
-multiqc_yaml: "/Users/Aarthi/resources/multiqc_config.yaml" # example file provided in NGS-Data-Charmer folder
+bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 index
 
+multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer-COPY/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
+ngs_path: "/path/to/Tools/NGS-Data-Charmer-COPY" # location of NGS-Data-Charmer folder
+
+# FOR CUT&RUN AND CHIPSEQ -
+chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
+# This file must named as follows "<genomeid>.chrom.sizes", any other filename format (e.g. "mm10_chr_len") will 
+# cause the TDF step to produce an empty TDF. Please see the Broad website for more information:
+# http://software.broadinstitute.org/software/igv/chromSizes
 
 # ONLY FOR RNASEQ -
+gtf: "/path/to/gencode.vM22.annotation.gtf"
+count_scheme: "fraction" # fraction or count_all or count_uniq
 
-gtf: "/Users/Aarthi/resources/Mus_musculus.GRCm38.84.gtf" # path to gtf file 
-
-
-
-# ONLY FOR CHIPSEQ -
-
-chr_sizes: "/home/aarthi/resources/mm10.chrom.sizes" # path to chr.sizes file (only for chipseq)
-
+# OUTPUT options
+keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
+keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
+to_tdf: "TRUE" # Produce TDF files
+to_bed: "TRUE" # Produce bed files
+to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
+to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
+cufflinks_bam: "FALSE" # Use HISAT2 options to produce bam file compatible with Cufflinks
