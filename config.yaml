@@ -31,3 +31,4 @@ to_tdf: "TRUE" # Produce TDF files
 to_bed: "TRUE" # Produce bed files
 to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
 to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
+cufflinks_bam: "FALSE" # Use HISAT2 options to produce bam file compatible with Cufflinks
