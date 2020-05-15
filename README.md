@@ -12,13 +12,13 @@ To create an environment using the environment.yaml file, type the following:
 
 `conda env create -f environment.yaml`
 
-This will create a conda environment called ngs_data_charmer_copy.
+This will create a conda environment called ngs_data_charmer.
 
 ## Usage note:
 
 You must manually activate the conda environment prior to running the sh files. Type the following to activate the environment:
 
-`conda activate ngs_data_charmer_copy`
+`conda activate ngs_data_charmer`
 
 The reason for this requirement is a failure of the conda environment to successfully activate from within a shell script.
 
@@ -126,7 +126,7 @@ While originally derived from Cut&Run sequencing, the sample dataset can also be
 
 You can also customize the run\_snakemake.sh and run\_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
 
-`source activate ngs_data_charmer_copy`
+`source activate ngs_data_charmer`
 
 followed by 
 
