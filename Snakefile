@@ -395,7 +395,7 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
                     output/temp_dir/{wildcards.sample}_R2.fq{params}")
                 shell("trim_galore \
                     output/temp_dir/{wildcards.sample}_R1.fq{params} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params} --paired \
+                    output/temp_dir/{wildcards.sample}_R2.fq{params} --paired --gzip \
                     -o ./output/trim_fastq")
                 shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
                     output/temp_dir/{wildcards.sample}_R2.fq{params} -o ./output/fastqc")
@@ -457,7 +457,7 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
                 shell("cp {input.pair1} \
                     output/temp_dir/{wildcards.sample}_R1.fq{params}")
                 shell("trim_galore \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params} \
+                    output/temp_dir/{wildcards.sample}_R1.fq{params} --gzip \
                     -o ./output/trim_fastq"),
                 shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
                     -o ./output/fastqc")
@@ -467,7 +467,8 @@ if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
             input:
                 trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz"
             params:
-                index = config["index"]
+                index = config["index"],
+                suffix = config["suffix"]
             output:
                 bam = "output/bam/{sample}.bam",
                 bambai = "output/bam/{sample}.bam.bai"
