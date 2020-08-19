@@ -18,3 +18,10 @@ multiqc_data
 multiqc_report.html
 tdf
 Snakefile_fordag
+._.DS_Store
+._README.md
+._cluster.json
+._config.yaml
+._environment.yaml
+._run_snakemake.sh
+
