@@ -34,11 +34,6 @@
         "walltime"    : "04:00"
     },
 
-    "bam_to_unique_mapped":
-    {
-        "walltime"    : "04:00"
-    },
-
     "rmdup_to_tdf":
     {
         "walltime"    : "02:00"
@@ -74,11 +69,6 @@
     {
         "walltime" : "00:10"
     },
-
-    "sortedbam_to_rmdup_rnaseq":
-    {
-        "walltime"    : "04:00"
-    },
     
     "split_length_long":
     {
@@ -99,11 +89,6 @@
     {
         "memory"    : 24000,
         "walltime"    : "2:00"
-    },
-
-    "sort_combined_lengths":
-    {
-        "walltime"    : "03:00"
     },
 
     "bowtie2":

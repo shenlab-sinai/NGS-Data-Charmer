@@ -86,7 +86,7 @@ def fix_input_files(file_suffix, input_fileset, myfastqpath):
     # file_suffix, input_fileset = [".gz", gzfiles]
     # Create the series of fastq file endings to search
     base_endings_r1, base_endings_r2 = [create_endings(i) for i in (1, 2)]
-    # Define the R1 and R1 suffix pairs for reference
+    # Define the R1 and R2 suffix pairs for reference
     ending_dictionary = dict(zip(base_endings_r1, base_endings_r2))
     mylist = list()  # Create empty list
 
@@ -151,7 +151,7 @@ def fix_input_files(file_suffix, input_fileset, myfastqpath):
             input_fileset = getfilelist(myfastqpath)[0]
 
         # Now process single end files
-        # Identify files that are do not match the current R1, R2 ending
+        # Identify files that do not match the current R1, R2 ending
         odd_files = [i for i in input_fileset if not
                      i.endswith(myR1_suffix + file_suffix) if not
                      i.endswith(myR2_suffix + file_suffix)]

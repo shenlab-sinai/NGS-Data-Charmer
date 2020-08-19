@@ -1,5 +1,4 @@
-#required arguments
-
+# REQUIRED ARGUMENTS -
 type: "paired" # single or paired
 
 experiment: "chipseq" # chipseq or rnaseq or cutrun
@@ -8,11 +7,10 @@ threads_for_alignment: 4 # May be increased to speed up alignment
 
 index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
-bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 index
+multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
 
-multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer-COPY/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
+ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
 
-ngs_path: "/path/to/Tools/NGS-Data-Charmer-COPY" # location of NGS-Data-Charmer folder
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
@@ -20,11 +18,17 @@ chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for
 # cause the TDF step to produce an empty TDF. Please see the Broad website for more information:
 # http://software.broadinstitute.org/software/igv/chromSizes
 
+
+# ONLY FOR CUT&RUN -
+bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 index
+
+
 # ONLY FOR RNASEQ -
 gtf: "/path/to/gencode.vM22.annotation.gtf"
 count_scheme: "fraction" # fraction or count_all or count_uniq
 
-# OUTPUT options
+
+# OUTPUT OPTIONS
 keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
 keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
 to_tdf: "TRUE" # Produce TDF files

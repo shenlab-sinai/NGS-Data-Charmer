@@ -126,7 +126,7 @@ While originally derived from Cut&Run sequencing, the sample dataset can also be
 
 You can also customize the run\_snakemake.sh and run\_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
 
-`source activate ngs_data_charmer`
+`conda activate ngs_data_charmer`
 
 followed by 
 
