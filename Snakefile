@@ -104,9 +104,9 @@ if config["type"] == "single":
 elif config["type"] == "paired":
     len_r1 = len([i for i in onlyfiles if i.endswith(R1_file_ending + suffix)])
     if len_r1*2 != len(onlyfiles):
-        myinput = "One or more samples do not have a read pair!\nIf using \
-            paired-end samples, please ensure each sample has read 1 and \
-            read 2 files\nAborting..."
+        myinput = ("One or more samples do not have a read pair!\n"
+            "If using paired-end samples, please ensure "
+            "each sample has read 1 and read 2 files. \nAborting...")
         raise NameError(myinput)  # Raise exception to break workflow
 else:
     myinput = "You have specified unknown read type: " + \
@@ -617,7 +617,6 @@ rule chrbam_to_bed:
         "bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
 # Create counts files for RNA-seq
-config["gene_scheme"] = "-t gene"  # or "-g gene_id"
 rule sortedbam_to_counts:
     input:
         sorted_bam = "output/bam/{sample}.sorted.bam" if config[
@@ -631,53 +630,37 @@ rule sortedbam_to_counts:
         "output/logs/{sample}.feature_counts.log"
     run:
         if config["count_scheme"] == "fraction" and config["type"] == "paired":
-            shell("featureCounts -p -O --fraction {params.gene_scheme} \
+            shell("featureCounts -p -O --fraction -t {params.gene_scheme} \
                 -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
         elif config["count_scheme"] == "fraction" and config["type"] == "single":
-            shell("featureCounts -O --fraction {params.gene_scheme} \
+            shell("featureCounts -O --fraction -t {params.gene_scheme} \
                 -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
         elif config["count_scheme"] == "count_all" and config["type"] == "paired":
-            shell("featureCounts -p -O {params.gene_scheme} -a {params.gtf} \
+            shell("featureCounts -p -O -t {params.gene_scheme} -a {params.gtf} \
                 -o {output.counts} {input.sorted_bam} 2> {log}")
         elif config["count_scheme"] == "count_all" and config["type"] == "single":
-            shell("featureCounts -O {params.gene_scheme} -a {params.gtf} \
+            shell("featureCounts -O -t {params.gene_scheme} -a {params.gtf} \
                 -o {output.counts} {input.sorted_bam} 2> {log}")
         elif config["count_scheme"] == "count_uniq" and config["type"] == "paired":
-            shell("featureCounts -p {params.gene_scheme} -a {params.gtf} \
+            shell("featureCounts -p -t {params.gene_scheme} -a {params.gtf} \
                 -o {output.counts} {input.sorted_bam} 2> {log}")
         elif config["count_scheme"] == "count_uniq" and config["type"] == "single":
-            shell("featureCounts {params.gene_scheme} -a {params.gtf} \
+            shell("featureCounts -t {params.gene_scheme} -a {params.gtf} \
                 -o {output.counts} {input.sorted_bam} 2> {log}")
 
 # Compile counts for RNA-seq
 rule counts_matrix:
     input:
-        counts = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
+        counts = expand("output/counts/{sample}.counts.txt", 
+                        sample=SAMPLES)
     output:
         matrix = "output/counts_matrix.txt"
+    log:
+        "output/logs/counts_matrix.log"
     params:
-        config["gene_scheme"]
+        ngs_path = config["ngs_path"]
     run:
-        import pandas as pd
-
-        dict_of_counts = {}
-
-        for file in input:
-            sample = file.split(".")[0]
-            dict_of_counts[sample] = {}
-
-            with open(file, "r") as infile:
-                next(infile)
-                next(infile)
-                for lines in infile:
-                    lines = lines.strip().split("\t")
-                    if {params} == "-t gene":
-                        dict_of_counts[sample][lines[0]] = int(float(lines[7]))
-                    else:
-                        dict_of_counts[sample][lines[0]] = int(float(lines[6]))
-
-        dataframe = pd.DataFrame(dict_of_counts)
-        dataframe.to_csv(output[0], sep='\t')
+    	shell("python {params.ngs_path}/ngs_helper/generate_counts_matrix.py {output.matrix} {input.counts}")
 
 # Create multiqc report for RNA-seq
 if config["experiment"] == "rnaseq":

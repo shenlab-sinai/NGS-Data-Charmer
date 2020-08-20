@@ -26,6 +26,7 @@ bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 inde
 # ONLY FOR RNASEQ -
 gtf: "/path/to/gencode.vM22.annotation.gtf"
 count_scheme: "fraction" # fraction or count_all or count_uniq
+gene_scheme: "gene"  # gene or exon or transcript
 
 
 # OUTPUT OPTIONS

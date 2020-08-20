@@ -24,4 +24,5 @@ Snakefile_fordag
 ._config.yaml
 ._environment.yaml
 ._run_snakemake.sh
-
+._Snakefile
+ngs_helper/._generate_counts_matrix.py
