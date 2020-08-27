@@ -1,14 +1,16 @@
-#required arguments
-
+# REQUIRED ARGUMENTS -
 type: "paired" # single or paired
 
-experiment: "cutrun" # chipseq or rnaseq or cutrun
+experiment: "chipseq" # chipseq or rnaseq or cutrun
 
 threads_for_alignment: 4 # May be increased to speed up alignment
 
-hisat2_index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
+index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
-ngs_path: "/home/molly/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
+multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
+
+ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
+
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
@@ -16,32 +18,22 @@ chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for
 # cause the TDF step to produce an empty TDF. Please see the Broad website for more information:
 # http://software.broadinstitute.org/software/igv/chromSizes
 
+
+# ONLY FOR CUT&RUN -
+bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 index
+
+
 # ONLY FOR RNASEQ -
-# gtf: "/path/to/gencode.vM22.annotation.gtf"
-gtf: "/sc/hydra/work/estilm01/hisat_genome/gencode.vM25.annotation.gtf"
-count_scheme: "fraction" # fraction or all_reads or unique_reads
-gene_scheme: "gene" # input to featureCount's "-t" parameter, which specifies
-                      # feature type(s) in a GTF annotation. If multiple
-                      # types are provided, they should be separated by ',' with
-                      # no space in between. Rows in the
-                      # annotation with a matched feature will be extracted and
-                      # used for read mapping.
+gtf: "/path/to/gencode.vM22.annotation.gtf"
+count_scheme: "fraction" # fraction or count_all or count_uniq
+gene_scheme: "gene"  # gene or exon or transcript
 
 
-# OUTPUT options
+# OUTPUT OPTIONS
 keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
 keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
 to_tdf: "TRUE" # Produce TDF files
-to_bed: "FALSE" # Produce bed files
-to_bw: "FALSE" # Produce bigwig of reads from main chromsomes
+to_bed: "TRUE" # Produce bed files
+to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
 to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
 cufflinks_bam: "FALSE" # Use HISAT2 options to produce bam file compatible with Cufflinks
-
-# Experimental options for aligning with STAR
-use_star: "FALSE" # Should STAR aligner be used?
-star_indexloc: /path/to/STAR_index/ # User can specify the location of a pre-existing STAR index.
-# STAR index requires at least 100 GB of free space. It will automatically be created at this location OR
-# the working dirctory if it doesn't already exist.
-genome_fasta: /path/to/mm10/Sequence/WholeGenomeFasta/genome.fa 
-
-
