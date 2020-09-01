@@ -1,3 +1,7 @@
+
+rule generate_star_index:
+rule fastq_to_bam_STAR:
+
 {
     "__default__" :
     {
@@ -17,9 +21,26 @@
         "walltime"    : "10:00"
     },
 
+    "trim_fastq_fastqc_cutrun" :
+    {
+        "walltime"    : "10:00"
+    },
+
+    "generate_star_index" :
+    {
+        "resources" : "\"rusage[mem=40000] span[hosts=1]\"",
+        "walltime"    : "10:00"
+    },
+
     "fastq_to_bam" :
     {
         "memory"    : 24000,
+        "walltime"    : "10:00"
+    },
+
+    "fastq_to_bam_STAR" :
+    {
+        "memory"    : 40000,
         "walltime"    : "10:00"
     },
 
@@ -69,36 +90,31 @@
     {
         "walltime" : "00:10"
     },
+
+    "sortedbam_to_rmdup_rnaseq":
+    {
+        "walltime"    : "04:00"
+    },
     
-    "split_length_long":
+    "split_long_reads":
     {
         "walltime"    : "08:00"
     },
 
-    "split_length_short":
+    "split_short_reads":
     {
         "walltime"    : "08:00"
     },
 
-    "trim_long":
+    "trim_long_reads":
     {
         "walltime"    : "08:00"
     },
 
-    "combine_split_lengths":
+    "combine_split_reads":
     {
         "memory"    : 24000,
         "walltime"    : "2:00"
-    },
-
-    "bowtie2":
-    {
-        "walltime"    : "08:00"
-    },
-
-    "rmdup":
-    {
-        "walltime"    : "03:00"
     }
 
 }
