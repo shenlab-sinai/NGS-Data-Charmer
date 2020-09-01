@@ -1,0 +1,149 @@
+rule trim_fastq_fastqc_cutrun:
+    input:
+        pair1 = create_fastq_inputs(config)[0]
+    output:
+        trimmed_pair1 = temp(
+            "output/trim_fastq/{sample}_R1_val_1.fq.gz"),
+        trimmed_pair2 = temp(
+            "output/trim_fastq/{sample}_R2_val_2.fq.gz"),
+        fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+        fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"
+    log:
+        "output/logs/{sample}.trim_adapters.log"
+    params:
+        pair2 = create_fastq_inputs(config)[1]
+    run:
+        shell("mkdir -p output/temp_dir")
+        if config["type"] == "paired":
+            # mv files to R1 and R2 ending in temporary directory
+            shell("cp {input.pair1} \
+                output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+            shell("cp {params.pair2} \
+                output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+            shell("trim_galore \
+                --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
+                -o ./output/trim_fastq")
+            shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
+                -o ./output/fastqc")
+        if config["type"] == "single":
+            # mv files to R1 and R2 ending in temporary directory
+            shell("cp {input.pair1} \
+                output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+            shell("trim_galore \
+                --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                -o ./output/trim_fastq --basename {wildcards.sample}")
+            shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz \
+                output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
+            shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                -o ./output/fastqc")
+            shell("touch {output.trimmed_pair2}")
+            shell("touch {output.fastqc_zipfile2}")
+
+rule split_long_reads:
+    input:
+        trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
+        trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
+    output:
+        cut_r1_p1 = temp("output/trim_fastq/{sample}_t1_R1.len75.fastq"),
+        cut_r2_p1 = temp("output/trim_fastq/{sample}_t1_R2.len75.fastq")
+    log:
+        "output/logs/{sample}.split_length_keeplong.log"
+    run:
+        #This step removes the temporary files in "output/temp_dir"
+        if config["type"] == "paired":
+            shell("cutadapt --minimum-length {read_length} \
+                -o {output.cut_r1_p1} {input.trimg_pair1}"),
+            shell("cutadapt --minimum-length {params.read_length} \
+                -o {output.cut_r2_p1} {input.trimg_pair2}")
+            shell(
+                "rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+            shell(
+                "rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+        if config["type"] == "single":
+            shell("cutadapt --minimum-length {read_length} \
+                -o {output.cut_r1_p1} {input.trimg_pair1}")
+            shell("touch {output.cut_r2_p1}")
+            shell("rm output/fastqc/{wildcards.sample}_R2_fastqc.zip")
+            shell(
+                "rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+
+rule split_short_reads:
+    input:
+        trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
+        trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
+    output:
+        cut_r1_p2 = temp("output/trim_fastq/{sample}_t1_R1.lt75.fastq"),
+        cut_r2_p2 = temp("output/trim_fastq/{sample}_t1_R2.lt75.fastq")
+    log:
+        "output/logs/{sample}.split_length_keepshort.log"
+    run:
+        if config["type"] == "paired":
+            shell("cutadapt --maximum-length {read_length} \
+                -o {output.cut_r1_p2} {input.trimg_pair1}"),
+            shell("cutadapt --maximum-length {read_length} \
+                -o {output.cut_r2_p2} {input.trimg_pair2}")
+        if config["type"] == "single":
+            shell("cutadapt --maximum-length {read_length} \
+                -o {output.cut_r1_p2} {input.trimg_pair1}")
+            shell("touch {output.cut_r2_p2}")
+
+rule trim_long_reads:
+    input:
+        cut_r1_p1 = "output/trim_fastq/{sample}_t1_R1.len75.fastq",
+        cut_r2_p1 = "output/trim_fastq/{sample}_t1_R2.len75.fastq"
+    output:
+        cut_r1_p3 = temp(
+            "output/trim_fastq/{sample}_t1_R1.len75_trim.fastq"),
+        cut_r2_p3 = temp(
+            "output/trim_fastq/{sample}_t1_R2.len75_trim.fastq")
+    log:
+        "output/logs/{sample}.trim_long.log"
+    run:
+        if config["type"] == "paired":
+            shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}"),
+            shell("cutadapt -u -6 -o {output.cut_r2_p3} {input.cut_r2_p1}")
+        if config["type"] == "single":
+            shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}"),
+            shell("touch {output.cut_r2_p3}")
+
+rule combine_split_reads:
+    input:
+        cut_r1_p3 = "output/trim_fastq/{sample}_t1_R1.len75_trim.fastq",
+        cut_r2_p3 = "output/trim_fastq/{sample}_t1_R2.len75_trim.fastq",
+        cut_r1_p2 = "output/trim_fastq/{sample}_t1_R1.lt75.fastq",
+        cut_r2_p2 = "output/trim_fastq/{sample}_t1_R2.lt75.fastq"
+    output:
+        cut_r1_p4 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
+        cut_r2_p4 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
+    run:
+        if config["type"] == "paired":
+            shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > \
+                output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
+            shell("cat {input.cut_r2_p3} {input.cut_r2_p2} > \
+                output/trim_fastq/{wildcards.sample}_t2_R2.fastq"),
+            shell("cat output/trim_fastq/{wildcards.sample}_t2_R1.fastq \
+                | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
+            shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
+                output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq \
+                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+            shell("rm output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
+            shell("cat output/trim_fastq/{wildcards.sample}_t2_R2.fastq \
+                | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
+            shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
+                output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq \
+                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+            shell("rm output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
+            shell(
+                "gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+            shell(
+                "gzip output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+            shell("rm output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
+            shell("rm output/trim_fastq/{wildcards.sample}_t2_R2.fastq")
+        if config["type"] == "single":
+            shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > \
+                output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
+            shell("gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
+            shell("touch {output.cut_r2_p4}")
+# end pre-processing for cut and run samples

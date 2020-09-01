@@ -1,0 +1,102 @@
+## Rules for STAR alignment
+# Introduce rule for generating STAR index
+rule generate_star_index:
+    input:
+        fasta_file = expand("{param}", param=config["genome_fasta"])
+    output:
+        starindex_file = expand("{param}/genomeParameters.txt", param=config["star_indexloc"]) # use as input for alignment step.
+    params:
+        star_indexloc = config["star_indexloc"],
+        gtf = config["gtf"]
+    log:
+        "output/logs/STAR_index_build.log"                        
+    run:
+        shell("STAR --runThreadN 4 --runMode genomeGenerate \
+        --genomeDir {params.star_indexloc} --genomeFastaFiles {params.star_fasta} \
+        --sjdbGTFfile {params.gtf} --sjdbOverhang 100")
+
+rule fastq_to_bam_STAR:
+    input:
+        trimmed_pair = ["output/trim_fastq/{sample}_R1_trimmed.fq.gz",\
+            "output/trim_fastq/{sample}_R2_trimmed.fq.gz"],
+        STAR_index = expand("{param}/genomeParameters.txt", param=config["star_indexloc"])
+    params:
+        star_indexloc = config["star_indexloc"],
+        gtf = config["gtf"]
+    output:
+        bam = "output/bam/{sample}.bam",
+        bambai = "output/bam/{sample}.bam.bai"
+    threads: config["threads_for_alignment"]
+    log:
+        "output/logs/{sample}.alignment.log"
+    run:
+        #Add single-end option
+        if config["type"] == "paired":
+            if config["experiment"] != "rnaseq" :
+                # Splicing is not desired in cut&run and chipseq
+                if config["cufflinks_bam"] == "FALSE" :
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --alignSJDBoverhangMin 999 \
+                    --readFilesIn {input.trimmed_pair}[0] {input.trimmed_pair}[1] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+                else:
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --alignSJDBoverhangMin 999 \
+                    --outSAMstrandField intronMotif --outFilterIntronMotifs RemoveNoncanonical \
+                    --readFilesIn {input.trimmed_pair}[0] {input.trimmed_pair}[1] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+            if config["experiment"] == "rnaseq" :
+                # Allow splicing for RNAseq
+                if config["cufflinks_bam"] == "FALSE" :
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --readFilesIn {input.trimmed_pair}[0] {input.trimmed_pair}[1] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+                else:
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --outSAMstrandField intronMotif --outFilterIntronMotifs RemoveNoncanonical \
+                    --readFilesIn {input.trimmed_pair}[0] {input.trimmed_pair}[1] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+        if config["type"] == "single":
+            if config["experiment"] != "rnaseq" :
+                # Splicing is not desired in cut&run and chipseq
+                if config["cufflinks_bam"] == "FALSE" :
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --alignSJDBoverhangMin 999 \
+                    --readFilesIn {input.trimmed_pair}[0] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+                else:
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --alignSJDBoverhangMin 999 \
+                    --outSAMstrandField intronMotif --outFilterIntronMotifs RemoveNoncanonical \
+                    --readFilesIn {input.trimmed_pair}[0] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+            if config["experiment"] == "rnaseq" :
+                # Allow splicing for RNAseq
+                if config["cufflinks_bam"] == "FALSE" :
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --readFilesIn {input.trimmed_pair}[0] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+                else:
+                    shell("STAR --runThreadN {threads} --genomeDir {params.star_indexloc} \
+                    --outSAMstrandField intronMotif --outFilterIntronMotifs RemoveNoncanonical \
+                    --readFilesIn {input.trimmed_pair}[0] \
+                    --outFileNamePrefix output/bam/{wildcards.sample} \
+                    --readFilesCommand zcat")
+        shell("mv output/bam/{wildcards.sample}Aligned.out.sam output/bam/{wildcards.sample}.sam")
+        shell("samtools sort output/bam/{wildcards.sample}.sam | \
+            samtools view -bS - > {output.bam}"),
+        shell("samtools index {output.bam}")
+        shell("rm output/bam/{wildcards.sample}.sam")
+        shell(
+            "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
+        shell(
+            "rm output/temp_dir/{wildcards.sample}_R2.fq{params.suffix}")
+        if config["keep_fastq"] == "FALSE":
+            shell("rm {input.trimmed_pair}[0] {input.trimmed_pair}[1]")
