@@ -426,8 +426,6 @@ rule counts_matrix:
         counts = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
     output:
         matrix = "output/counts_matrix.txt"
-    params:
-        config["gene_scheme"]
     run:
         import pandas as pd
 
@@ -442,10 +440,7 @@ rule counts_matrix:
                 next(infile)
                 for lines in infile:
                     lines = lines.strip().split("\t")
-                    if {params} == "-t gene":
-                        dict_of_counts[sample][lines[0]] = int(float(lines[7]))
-                    else:
-                        dict_of_counts[sample][lines[0]] = int(float(lines[6]))
+                    dict_of_counts[sample][lines[0]] = int(float(lines[-1]))
 
         dataframe = pd.DataFrame(dict_of_counts)
         dataframe.to_csv(output[0], sep='\t')
