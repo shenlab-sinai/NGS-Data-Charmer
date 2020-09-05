@@ -62,9 +62,9 @@ def create_fastq_inputs(config):
     1st string denotes the forward read
     2nd string denotes the reverse read
     """
-    return([("fastq/{sample}" + expand("{ending}{suffix}", \
-            ending=R1_file_ending, suffix=suffix)[0]+""),
-            ("fastq/{sample}" + expand("{ending}{suffix}", \
+    return([os.path.join("fastq","{sample}"+expand("{ending}{suffix}", \
+        ending=R1_file_ending, suffix=suffix)[0]+""),
+        os.path.join("fastq","{sample}"+expand("{ending}{suffix}", \
             ending=R2_file_ending, suffix=suffix)[0]+"")])
 ## End helper functions
 
@@ -92,7 +92,7 @@ else:
             ngs_helper.fix_input_files("", onlyfiles, myfastqpath)
     suffix = ""
 
-sample_string = myfastqpath + "{sample}" + R1_file_ending + suffix
+sample_string = os.path.join("fastq","{sample}"+R1_file_ending+suffix)
 SAMPLES, = glob_wildcards(sample_string)
 
 # Check the file pairing
@@ -123,7 +123,7 @@ elif len(gzfiles) == 0 and config["experiment"] == "cutrun":
 ## Determine if genome index should be built for STAR aligner
 if config["use_star"] == "TRUE":
     #verify that star index exists
-    if isfile(config["star_indexloc"]+"/genomeParameters.txt"):
+    if isfile(os.path.join(config["star_indexloc"],"genomeParameters.txt")):
         print("Using STAR index in "+config["star_indexloc"])
     else:
         # verify that fasta needed for genome does exist
@@ -148,7 +148,7 @@ rule all:
 
 ## Select correct rule(s) for trimming reads
 if config["experiment"] == "cutrun":
-    include: config["ngs_path"]+"/cr_rules.snake"
+    include: os.path.join(config["ngs_path"],"cr_rules.snake")
 else:
     rule trim_fastq_fastqc:
         input:
@@ -198,7 +198,7 @@ else:
 ## Select correct rules for aligning reads
 if config["use_star"] == "TRUE":
     # ruleorder: bam_to_unique_mapped > fastq_to_bam_STAR
-    include: config["ngs_path"]+"/star_rules.snake"
+    include: os.path.join(config["ngs_path"],"star_rules.snake")
 
 if config["use_star"] == "FALSE":
     rule fastq_to_bam_HISAT:
@@ -453,7 +453,7 @@ rule run_multiqc:
     output:
         multiqc_report = "output/multiqc_report.html"
     params:
-        multiqc_config = config["ngs_path"]+"/multiqc_config_template.yaml"
+        multiqc_config = os.path.join(expand("{param}", param=config["ngs_path"])[0],"multiqc_config_template.yaml")
     shell:
         "multiqc . -f --outdir ./output/ --config {params.multiqc_config}"
 
