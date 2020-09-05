@@ -4,7 +4,7 @@ rule generate_star_index:
     input:
         fasta_file = expand("{param}", param=config["genome_fasta"])
     output:
-        starindex_file = expand("{param}/genomeParameters.txt", param=config["star_indexloc"]) # use as input for alignment step.
+        STAR_index = os.path.join(expand("{param}", param=config["star_indexloc"])[0],"genomeParameters.txt")
     params:
         star_indexloc = config["star_indexloc"],
         gtf = config["gtf"]
@@ -19,7 +19,7 @@ rule fastq_to_bam_STAR:
     input:
         trimmed_pair = ["output/trim_fastq/{sample}_R1_trimmed.fq.gz",\
             "output/trim_fastq/{sample}_R2_trimmed.fq.gz"],
-        STAR_index = expand("{param}/genomeParameters.txt", param=config["star_indexloc"])
+        STAR_index = os.path.join(expand("{param}", param=config["star_indexloc"])[0],"genomeParameters.txt")
     params:
         star_indexloc = config["star_indexloc"],
         gtf = config["gtf"]
