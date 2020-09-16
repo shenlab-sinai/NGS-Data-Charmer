@@ -57,9 +57,8 @@ Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 ## Steps in RNA-seq pipeline:
 
- ![ScreenShot](/dag/dag_rnaseq.png) |![ScreenShot](/dag/dag_STAR_rnaseq.png)|
-                                    |:--:|
-                                    | *STAR alignment option* |
+STAR Alignment option presented on the right
+ ![ScreenShot](/dag/dag_rnaseq.png) || ![ScreenShot](/dag/dag_STAR_rnaseq.png)
 
 ## Steps in ChIP-seq pipeline:
 
