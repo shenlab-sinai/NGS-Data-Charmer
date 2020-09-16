@@ -219,24 +219,24 @@ if config["use_star"] == "FALSE":
                 if config["type"] == "paired":
                     if config["cufflinks_bam"] == "FALSE" :
                         shell("hisat2 -p {threads} -x {params.index} \
-                            -1 {input.trimmed_pair}[0] -2 {input.trimmed_pair}[1] \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
                         shell("hisat2 -p {threads} -x {params.index} \
                             --pen-noncansplice 1000000 \
                             --no-spliced-alignment \
-                            -1 {input.trimmed_pair}[0] -2 {input.trimmed_pair}[1] \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                 if config["type"] == "single":        
                     if config["cufflinks_bam"] == "FALSE":
                         shell("hisat2 -p {threads} -x {params.index} \
-                            -U {input.trimmed_pair}[0] \
+                            -U {input.trimmed_pair[0]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
                         shell("hisat2 -p {threads} -x {params.index} \
-                            --pen-noncansplice 1000000 -U {input.trimmed_pair}[0] \
+                            --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
             if config["experiment"] == "rnaseq" :
@@ -244,21 +244,21 @@ if config["use_star"] == "FALSE":
                 if config["type"] == "paired":
                     if config["cufflinks_bam"] == "FALSE" :
                         shell("hisat2 -p {threads} -x {params.index} \
-                            -1 {input.trimmed_pair}[0] -2 {input.trimmed_pair}[1] \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
                         shell("hisat2 -p {threads} -x {params.index} \
                             --pen-noncansplice 1000000 \
-                            -1 {input.trimmed_pair}[0] -2 {input.trimmed_pair}[1] \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                 if config["type"] == "single":        
                     if config["cufflinks_bam"] == "FALSE":
                         shell("hisat2 -p {threads} -x {params.index} \
-                            -U {input.trimmed_pair}[0] \
+                            -U {input.trimmed_pair[0]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
                         shell("hisat2 -p {threads} -x {params.index} \
-                            --pen-noncansplice 1000000 -U {input.trimmed_pair}[0] \
+                            --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
             shell("samtools sort output/bam/{wildcards.sample}.sam | \
                 samtools view -bS - > {output.bam}"),
@@ -269,7 +269,7 @@ if config["use_star"] == "FALSE":
             shell(
                 "rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
             if config["keep_fastq"] == "FALSE":
-                shell("rm {input.trimmed_pair}[0] {input.trimmed_pair}[1]")
+                shell("rm {input.trimmed_pair[0]} {input.trimmed_pair[1]}")
 
 # Remove and sort the multimapped reads from ChIP-seq and cut&run samples
 if config["experiment"] != "rnaseq" :
@@ -425,14 +425,20 @@ rule counts_matrix:
     input:
         counts = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
     output:
-        matrix = "output/counts_matrix.txt"
+        "output/counts_matrix.txt"
     run:
         import pandas as pd
+        import platform
 
         dict_of_counts = {}
 
         for file in input:
             sample = file.split(".")[0]
+            if platform.system() != 'Windows':
+                sample = sample.split("/")[2]
+            else:
+                sample = sample.split("\\")[2]
+
             dict_of_counts[sample] = {}
 
             with open(file, "r") as infile:
@@ -445,16 +451,38 @@ rule counts_matrix:
         dataframe = pd.DataFrame(dict_of_counts)
         dataframe.to_csv(output[0], sep='\t')
 
+rule fpkm_matrix:
+    input:
+        counts = "output/counts_matrix.txt",
+        length = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
+    output:
+        "output/fpkm_matrix.txt"
+    run:
+        import pandas as pd
+
+        counts = pd.read_csv(input.counts, sep='\t')
+        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+
+        if all(gl.iloc[:,0]==counts.iloc[:,0]):
+            genelength = gl["Length"].values/1000
+            counts_rev = counts.drop("Unnamed: 0", axis=1).copy() # remove identifier column
+            colsum = counts_rev.copy().sum()/(10**6) # Sum count columns
+            rpkm = counts_rev.divide(genelength,axis=0).divide(colsum,axis=1)
+            dataframe = pd.concat([gl.iloc[:,0],rpkm],axis=1)
+            dataframe.to_csv(output[0], index=False, sep='\t')
+        else:
+            print("Gene IDs not identically aligned\nFPKM cannot be generated.")
+
 # Create multiqc report (used for all workflows) 
 rule run_multiqc:
     input:
-        "output/counts_matrix.txt" if config["experiment"] == "rnaseq" else \
+        "output/fpkm_matrix.txt" if config["experiment"] == "rnaseq" else \
         expand("output/bam/{sample}.unique.sorted.rmdup.chr.bam", sample=SAMPLES)
     output:
         multiqc_report = "output/multiqc_report.html"
     params:
         multiqc_config = os.path.join(expand("{param}", param=config["ngs_path"])[0],"multiqc_config_template.yaml")
     shell:
-        "multiqc . -f --outdir ./output/ --config {params.multiqc_config}"
+        "multiqc . -f --outdir ./ --config {params.multiqc_config}"
 
 
