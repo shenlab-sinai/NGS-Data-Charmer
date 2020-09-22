@@ -10,6 +10,8 @@ hisat2_index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 i
 
 ngs_path: "/home/molly/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
 
+trim_polyA: "FALSE" # Set to TRUE if RNAseq reads should be undergo trimming for polyA tails.
+
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
 # This file must named as follows "<genomeid>.chrom.sizes", any other filename format (e.g. "mm10_chr_len") will 
