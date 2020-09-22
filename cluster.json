@@ -1,7 +1,3 @@
-
-rule generate_star_index:
-rule fastq_to_bam_STAR:
-
 {
     "__default__" :
     {
@@ -32,9 +28,9 @@ rule fastq_to_bam_STAR:
         "walltime"    : "10:00"
     },
 
-    "fastq_to_bam" :
+    "fastq_to_bam_HISAT" :
     {
-        "memory"    : 24000,
+        "memory"    : 35000,
         "walltime"    : "10:00"
     },
 
