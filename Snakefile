@@ -128,13 +128,10 @@ if config["use_star"] == "TRUE":
     else:
         # verify that fasta needed for genome does exist
         if isfile(config["genome_fasta"]):
-            # star_index_needed="TRUE"        
-            print("Generating STAR index from the following fasta file and GTF file:\n"+\
-                config["genome_fasta"]+"\n"+config["gtf"])
+            star_index_needed="TRUE"        
             if isdir(config["star_indexloc"]):
                 print("STAR index will be created in\n"+config["star_indexloc"])
             else:
-                print("STAR index will be created in current directory.")
                 config["star_indexloc"]="index/"
         else:
             print("Fasta file specified for creating STAR index was invalid. Now exiting...")
@@ -164,36 +161,79 @@ else:
             pair2 = create_fastq_inputs(config)[1]
         run:
             shell("mkdir -p output/temp_dir")
-            if config["type"] == "paired":
-                # mv files to R1 and R2 ending in temporary directory
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
-                shell("cp {params.pair2} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
-                shell("trim_galore \
-                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
-                    -o ./output/trim_fastq")
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
-                    -o ./output/fastqc")
-                shell("mv output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz \
-                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
-                shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz \
-                    output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
-            if config["type"] == "single":
-                # mv files to R1 and R2 ending in temporary directory
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
-                shell("trim_galore \
-                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
-                    -o ./output/trim_fastq --basename {wildcards.sample}")
-                shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz \
-                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz")
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
-                    -o ./output/fastqc")
-                shell("touch {output.trimmed_pair2}")
-                shell("touch {output.fastqc_zipfile2}")
+            if config['trim_polyA'] == "TRUE":
+                if config["type"] == "paired":
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("cp {params.pair2} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    shell("trim_galore \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
+                        -o ./output/trim_fastq")
+                    shell("trim_galore \
+                        ./output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz \
+                        ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz --paired --polyA \
+                         --basename {wildcards.sample}_pat")
+                    shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
+                        -o ./output/fastqc")
+                    shell("mv ./{wildcards.sample}_pat_val_1.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
+                    shell("mv ./{wildcards.sample}_pat_val_2.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+                    shell("mv {wildcards.sample}_R2_val_2.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                    shell("mv {wildcards.sample}_R1_val_1.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                    shell("rm ./output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
+                    shell("rm ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz")
+                if config["type"] == "single":
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("trim_galore \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        -o ./output/trim_fastq --basename {wildcards.sample}")
+                    shell("trim_galore --polyA \
+                        ./output/trim_fastq/{wildcards.sample}_trimmed.fq.gz ") # new rule --basename {wildcards.sample}_pat
+                    shell("mv {wildcards.sample}_trimmed_trimmed.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz")
+                    shell("mv {wildcards.sample}_trimmed.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                    shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        -o ./output/fastqc")
+                    shell("touch {output.trimmed_pair2}")
+                    shell("touch {output.fastqc_zipfile2}")
+            else:
+                if config["type"] == "paired":
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("cp {params.pair2} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    shell("trim_galore \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
+                        -o ./output/trim_fastq")
+                    shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
+                        -o ./output/fastqc")
+                    shell("mv output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
+                    shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+                if config["type"] == "single":
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("trim_galore \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        -o ./output/trim_fastq --basename {wildcards.sample}")
+                    shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz \
+                        output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz")
+                    shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        -o ./output/fastqc")
+                    shell("touch {output.trimmed_pair2}")
+                    shell("touch {output.fastqc_zipfile2}")
 
 ## Select correct rules for aligning reads
 if config["use_star"] == "TRUE":
@@ -266,10 +306,11 @@ if config["use_star"] == "FALSE":
             shell("rm output/bam/{wildcards.sample}.sam")
             shell(
                 "rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
-            shell(
-                "rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
             if config["keep_fastq"] == "FALSE":
                 shell("rm {input.trimmed_pair[0]} {input.trimmed_pair[1]}")
+            if config["type"] == "paired":
+                shell(
+                    "rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
 
 # Remove and sort the multimapped reads from ChIP-seq and cut&run samples
 if config["experiment"] != "rnaseq" :
@@ -388,8 +429,7 @@ rule chrbam_to_bed:
 # Create counts files for RNA-seq
 rule sortedbam_to_counts:
     input:
-        sorted_bam = "output/bam/{sample}.sorted.bam" if config[
-            "type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
+        sorted_bam = "output/bam/{sample}.sorted.bam" if config["type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
     output:
         counts = "output/counts/{sample}.counts.txt"
     params:
