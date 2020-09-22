@@ -96,7 +96,8 @@ rule fastq_to_bam_STAR:
         shell("rm output/bam/{wildcards.sample}.sam")
         shell(
             "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
-        shell(
-            "rm output/temp_dir/{wildcards.sample}_R2.fq{params.suffix}")
+        if config["type"] == "paired":
+            shell(
+                "rm output/temp_dir/{wildcards.sample}_R2.fq{params.suffix}")
         if config["keep_fastq"] == "FALSE":
             shell("rm {input.trimmed_pair[0]} {input.trimmed_pair[1]}")
