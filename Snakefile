@@ -158,16 +158,22 @@ else:
         log:
             "output/logs/{sample}.trim_adapters.log"
         params:
-            pair2 = create_fastq_inputs(config)[1]
+            pair2 = create_fastq_inputs(config)[1],
+            umi_pattern = config["UMI_pattern"]
         run:
             shell("mkdir -p output/temp_dir")
             if config['trim_polyA'] == "TRUE":
                 if config["type"] == "paired":
-                    # mv files to R1 and R2 ending in temporary directory
-                    shell("cp {input.pair1} \
-                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
-                    shell("cp {params.pair2} \
-                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    if config["use_UMI"] == "TRUE":
+                        shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_pattern} \
+                        --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    else:
+                        # mv files to R1 and R2 ending in temporary directory
+                        shell("cp {input.pair1} \
+                            output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                        shell("cp {params.pair2} \
+                            output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
                     shell("trim_galore \
                         --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                         output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
@@ -188,9 +194,13 @@ else:
                     shell("rm ./output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
                     shell("rm ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz")
                 if config["type"] == "single":
-                    # mv files to R1 and R2 ending in temporary directory
-                    shell("cp {input.pair1} \
-                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    if config["use_UMI"] == "TRUE":
+                        shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_pattern} \
+                            --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    else:
+                        # mv files to R1 and R2 ending in temporary directory
+                        shell("cp {input.pair1} \
+                            output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                     shell("trim_galore \
                         --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                         -o ./output/trim_fastq --basename {wildcards.sample}")
@@ -205,11 +215,16 @@ else:
                     shell("touch {output.fastqc_zipfile2}")
             else:
                 if config["type"] == "paired":
-                    # mv files to R1 and R2 ending in temporary directory
-                    shell("cp {input.pair1} \
-                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
-                    shell("cp {params.pair2} \
-                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    if config["use_UMI"] == "TRUE":
+                        shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_pattern} \
+                        --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                    else:
+                        # mv files to R1 and R2 ending in temporary directory
+                        shell("cp {input.pair1} \
+                            output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                        shell("cp {params.pair2} \
+                            output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
                     shell("trim_galore \
                         --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                         output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
@@ -222,9 +237,13 @@ else:
                     shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz \
                         output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
                 if config["type"] == "single":
-                    # mv files to R1 and R2 ending in temporary directory
-                    shell("cp {input.pair1} \
-                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    if config["use_UMI"] == "TRUE":
+                        shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_pattern} \
+                            --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    else:
+                        # mv files to R1 and R2 ending in temporary directory
+                        shell("cp {input.pair1} \
+                            output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                     shell("trim_galore \
                         --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                         -o ./output/trim_fastq --basename {wildcards.sample}")
@@ -363,11 +382,17 @@ if config["experiment"] == "rnaseq":
             "output/logs/{sample}.rmdup.log"
         run:
             if config["type"] == "paired":
-                shell("samtools rmdup {input} {output} 2> {log}")
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools dedup --stdin={input} --log={log} --paired --unmapped-reads=use > {output}")
+                else:
+                    shell("samtools rmdup {input} {output} 2> {log}")
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")
             else:
-                shell("cp {input} {output}")
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools dedup --stdin={input} --log={log} > {output}")
+                else:
+                    shell("cp {input} {output}")
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")            
 
@@ -478,9 +503,9 @@ rule counts_matrix:
                 sample = sample.split("/")[2]
             else:
                 sample = sample.split("\\")[2]
-
+            
             dict_of_counts[sample] = {}
-
+            
             with open(file, "r") as infile:
                 next(infile)
                 next(infile)
@@ -500,10 +525,14 @@ rule fpkm_matrix:
     run:
         import pandas as pd
 
+        # counts = pd.read_csv("output/counts_matrix.txt", sep='\t')
+        # gl = pd.read_csv("output/counts/example.counts.txt", comment='#', header=0, sep='\t')
         counts = pd.read_csv(input.counts, sep='\t')
         gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        counts.sort_index(axis=0,ascending=True,inplace=True)
+        gl.sort_values('Geneid',axis=0,inplace=True)
 
-        if all(gl.iloc[:,0]==counts.iloc[:,0]):
+        if gl.iloc[:,0].tolist()==counts.iloc[:,0].tolist():
             genelength = gl["Length"].values/1000
             counts_rev = counts.drop("Unnamed: 0", axis=1).copy() # remove identifier column
             colsum = counts_rev.copy().sum()/(10**6) # Sum count columns

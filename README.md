@@ -117,6 +117,9 @@ You may want to retain the trimmed fastq files or unfiltered bam files. This is 
 ## Cut&Run note
 For very large Cut&Run sequencing runs, the walltime for the 'combine_split_lengths' may need to be increased. The 'combine_split_lengths' step does utilize parallel processing (4 threads) in order to speed up the read sorting. However, if you find that the pipeline fails at the 'combine_split_lengths', try increasing the walltime in the cluster.json file. 
 
+## Analyzing samples with Unique Molecular Identifiers (UMI)
+The ChIP-seq and RNA-seq modules of the pipeline are capable of analyzing reads generated using UMIs. This technique is common in Single-cell experiments, but can also apply to bulk sequencing, which may use UMIs to improve estimates of read duplication. To extract UMIs from Read 1 of a sequencing run, this pipeline uses UMI-tools. To use this option, modify the config file so that "use_umi" is "TRUE" and indicate the correct search pattern in the "UMI_pattern" slot. You can test this modality using UMI-tools' example single-end fastq file (https://umi-tools.readthedocs.io/en/latest/QUICK_START.html#step-2--download-the-test-data). You can also test the paired-end functionality using the publically available SRA dataset SRR8281153, using a UMI_pattern parameter of "CCCCCCCCNNNN".
+
 ## Test dataset
 
 A small example dataset, composed of two downsampled paired end Cut&Run samples, with 250K paired-end reads in each sample, are publically available for use: 

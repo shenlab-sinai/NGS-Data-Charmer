@@ -1,6 +1,5 @@
 #required arguments
-
-type: "paired" # single or paired
+type: "single" # single or paired
 
 experiment: "rnaseq" # chipseq or rnaseq or cutrun
 
@@ -8,9 +7,13 @@ threads_for_alignment: 4 # May be increased to speed up alignment
 
 hisat2_index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
-ngs_path: "/home/molly/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
+ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
 
 trim_polyA: "FALSE" # Set to TRUE if RNAseq reads should be undergo trimming for polyA tails.
+
+# Use of UMI -
+use_UMI: "FALSE"
+UMI_pattern: "NNNXXXXNN"
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
