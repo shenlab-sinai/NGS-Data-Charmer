@@ -529,7 +529,7 @@ rule fpkm_matrix:
         # gl = pd.read_csv("output/counts/example.counts.txt", comment='#', header=0, sep='\t')
         counts = pd.read_csv(input.counts, sep='\t')
         gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
-        counts.sort_index(axis=0,ascending=True,inplace=True)
+        counts.sort_values('Unnamed: 0',axis=0,inplace=True)
         gl.sort_values('Geneid',axis=0,inplace=True)
 
         if gl.iloc[:,0].tolist()==counts.iloc[:,0].tolist():
