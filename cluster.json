@@ -7,8 +7,8 @@
         "memory"    : 12000,
         "resources" : "\"rusage[mem=12000] span[hosts=1]\"",
         "jobname"      : "{rule}.{wildcards}",
-        "output"    : "logs/{rule}.{wildcards}.o",
-        "error"     : "logs/{rule}.{wildcards}.e",
+        "output"    : "output/logs/{rule}.{wildcards}.o",
+        "error"     : "output/logs/{rule}.{wildcards}.e",
         "walltime"    : "00:30"
     },
 
