@@ -55,7 +55,7 @@ rule split_long_reads:
         if config["type"] == "paired":
             shell("cutadapt --minimum-length {read_length} \
                 -o {output.cut_r1_p1} {input.trimg_pair1}"),
-            shell("cutadapt --minimum-length {params.read_length} \
+            shell("cutadapt --minimum-length {read_length} \
                 -o {output.cut_r2_p1} {input.trimg_pair2}")
             shell(
                 "rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
