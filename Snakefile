@@ -274,18 +274,21 @@ if config["use_star"] == "FALSE":
             "output/logs/{sample}.alignment.log"
         run:
             if config["experiment"] != "rnaseq" :
-                # Splicing is not desired in cut&run and chipseq
                 if config["type"] == "paired":
+                    # Perform the alignment
+                    # Splicing is not desired in cut&run and chipseq
                     if config["cufflinks_bam"] == "FALSE" :
                         shell("hisat2 -p {threads} -x {params.index} \
-                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
+                            -1 {input.trimmed_pair[0]} \
+                            -2 {input.trimmed_pair[1]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
                         shell("hisat2 -p {threads} -x {params.index} \
                             --pen-noncansplice 1000000 \
                             --no-spliced-alignment \
-                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
+                            -1 {input.trimmed_pair[0]} \
+                            -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                 if config["type"] == "single":        
                     if config["cufflinks_bam"] == "FALSE":
@@ -319,17 +322,16 @@ if config["use_star"] == "FALSE":
                         shell("hisat2 -p {threads} -x {params.index} \
                             --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
-            shell("samtools sort output/bam/{wildcards.sample}.sam | \
-                samtools view -bS - > {output.bam}"),
-            shell("samtools index {output.bam}")
+            shell("samtools sort -@ 8 -O BAM -o {output.bam} output/bam/{wildcards.sample}.sam")
             shell("rm output/bam/{wildcards.sample}.sam")
-            shell(
-                "rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+            shell("samtools index {output.bam}")
+            if config["experiment"] != "cutrun" :
+                shell("rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                if config["type"] == "paired":
+                    shell("rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
             if config["keep_fastq"] == "FALSE":
-                shell("rm {input.trimmed_pair[0]} {input.trimmed_pair[1]}")
-            if config["type"] == "paired":
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                shell("rm output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
 
 # Remove and sort the multimapped reads from ChIP-seq and cut&run samples
 if config["experiment"] != "rnaseq" :
