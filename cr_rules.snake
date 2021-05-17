@@ -127,14 +127,22 @@ rule combine_split_reads:
                 | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
             shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
                 output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq \
-                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
+                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed_pre.fq"),
             shell("rm output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
             shell("cat output/trim_fastq/{wildcards.sample}_t2_R2.fastq \
                 | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
             shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
                 output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq \
-                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
+                | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed_pre.fq"),
             shell("rm output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
+            shell("trimmomatic PE -threads {threads}  \
+                output/trim_fastq/{wildcards.sample}_R1_trimmed_pre.fq \
+                output/trim_fastq/{wildcards.sample}_R2_trimmed_pre.fq \
+                output/trim_fastq/{wildcards.sample}_R1_trimmed.fq \
+                output/trim_fastq/{wildcards.sample}_R1_singles.fastq \
+                output/trim_fastq/{wildcards.sample}_R2_trimmed.fq \
+                output/trim_fastq/{wildcards.sample}_R2_singles.fastq \
+                MINLEN:20")
             shell(
                 "gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
             shell(
@@ -146,4 +154,5 @@ rule combine_split_reads:
                 output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
             shell("gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
             shell("touch {output.cut_r2_p4}")
+
 # end pre-processing for cut and run samples
