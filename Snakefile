@@ -278,13 +278,13 @@ if config["use_star"] == "FALSE":
                     # Perform the alignment
                     # Splicing is not desired in cut&run and chipseq
                     if config["cufflinks_bam"] == "FALSE" :
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             -1 {input.trimmed_pair[0]} \
                             -2 {input.trimmed_pair[1]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             --pen-noncansplice 1000000 \
                             --no-spliced-alignment \
                             -1 {input.trimmed_pair[0]} \
@@ -292,12 +292,12 @@ if config["use_star"] == "FALSE":
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                 if config["type"] == "single":        
                     if config["cufflinks_bam"] == "FALSE":
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             -U {input.trimmed_pair[0]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
@@ -305,21 +305,21 @@ if config["use_star"] == "FALSE":
                 # Splicing is desired in rnaseq
                 if config["type"] == "paired":
                     if config["cufflinks_bam"] == "FALSE" :
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             --pen-noncansplice 1000000 \
                             -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                 if config["type"] == "single":        
                     if config["cufflinks_bam"] == "FALSE":
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             -U {input.trimmed_pair[0]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}")
                     else:
-                        shell("hisat2 -p {threads} -x {params.index} \
+                        shell("hisat2 -p {threads} --very-sensitive -x {params.index} \
                             --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
             shell("samtools sort -@ 8 -O BAM -o {output.bam} output/bam/{wildcards.sample}.sam")
