@@ -127,6 +127,15 @@ https://drive.google.com/drive/folders/1stoAAxEDL4dtJ4Vjm6y0FnnCH--dM_MZ?usp=sha
 
 While originally derived from Cut&Run sequencing, the sample dataset can also be run using the "rnaseq" and "chipseq" options.
 
+## Benchmarking time for different modes
+
+| Mode        | Sensitivity |Read pairs  | Alignment rate | Alignment \nduration |
+| :-----------|:-----------:|:----------:|:--------------:|:------------------:|
+| RNA        | Normal      | 53638135 | 75.97\% |  1h40min |
+| RNA    | Very Sensitive  | 53638135 | 81.33\% |  9h30min |
+| Cut&Run    | Normal      | 37427848 | inprog  |  inprog  |
+| Cut&Run | Very Sensitive | 37427848 | inprog  |  inprog  |
+
 ## Additional Snakemake options:
 
 You can also customize the run\_snakemake.sh and run\_snakemake_cluster.sh scripts according to your own needs. You might wish to change the number of cores snakemake uses. Or you might want to do a dryrun. To explore additional options available in snakemake, type:
