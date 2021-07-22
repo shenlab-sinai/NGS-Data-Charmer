@@ -11,6 +11,8 @@ ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folde
 
 trim_polyA: "FALSE" # Set to TRUE if RNAseq reads should be undergo trimming for polyA tails.
 
+use_very_sensitive: "TRUE" ## Set to TRUE if alignment step should use the "very sensitive" option.
+
 # Use of UMI -
 use_UMI: "FALSE"
 UMI_pattern: "NNNXXXXNN"
