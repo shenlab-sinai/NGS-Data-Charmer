@@ -129,7 +129,7 @@ While originally derived from Cut&Run sequencing, the sample dataset can also be
 
 ## Benchmarking time for different modes
 
-| Mode        | Sensitivity |Read pairs  | Alignment rate | Alignment \nduration |
+| Mode        | Sensitivity |Read pairs  | Alignment rate | Alignment<br />duration |
 | :-----------|:-----------:|:----------:|:--------------:|:------------------:|
 | RNA        | Normal      | 53638135 | 75.97\% |  1h40min |
 | RNA    | Very Sensitive  | 53638135 | 81.33\% |  9h30min |
