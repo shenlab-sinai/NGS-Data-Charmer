@@ -116,8 +116,8 @@ You may want to retain the trimmed fastq files or unfiltered bam files. This is 
 
 ## Cut&Run note
 For very large Cut&Run sequencing runs, the walltime for the 'combine_split_lengths' may need to be increased. The 'combine_split_lengths' step does utilize parallel processing (4 threads) in order to speed up the read sorting. However, if you find that the pipeline fails at the 'combine_split_lengths', try increasing the walltime in the cluster.json file. The current read-trimming implementation removes 6 bases from each read after adaptor removal (in a partial emulation of the approach used in CUT&RUNTools). While this universal trimming approach may be a disadvantage for shorter sequencing runs, it leaves the vast majority of reads at acceptable read lengths in tested datasets (75 bp or longer).
-![ScreenShot](/dag/SRR11731884_R1_lengths.png)
-![ScreenShot](/dag/SRR11731884_R2_lengths.png)
+![ScreenShot](/dag/SRR11731884_R1_lengths.png){ width=50% }
+![ScreenShot](/dag/SRR11731884_R2_lengths.png){ width=50% }
 
 
 ## Analyzing samples with Unique Molecular Identifiers (UMI)
