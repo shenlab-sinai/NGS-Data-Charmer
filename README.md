@@ -133,8 +133,8 @@ While originally derived from Cut&Run sequencing, the sample dataset can also be
 | :-----------|:-----------:|:----------:|:--------------:|:------------------:|
 | RNA        | Normal      | 53638135 | 75.97\% |  1h40min |
 | RNA    | Very Sensitive  | 53638135 | 81.33\% |  9h30min |
-| Cut&Run    | Normal      | 37427848 | inprog  |  inprog  |
-| Cut&Run | Very Sensitive | 37427848 | inprog  |  inprog  |
+| Cut&Run    | Normal      | 8485353  | 98.70\%  |  1h13min  |
+| Cut&Run | Very Sensitive | 8485353  | 98.68\%  |  1h33min  |
 
 ## Additional Snakemake options:
 
