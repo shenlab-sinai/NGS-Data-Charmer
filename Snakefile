@@ -275,8 +275,7 @@ if config["use_star"] == "FALSE":
             trimmed_pair = ["output/trim_fastq/{sample}_R1_trimmed.fq.gz", \
                             "output/trim_fastq/{sample}_R2_trimmed.fq.gz"]
         params:
-            hisat2index = config["hisat2_index"],
-            bowtie2index = config["bowtie2_index"] 
+            hisat2index = config["hisat2_index"]
         output:
             bam = "output/bam/{sample}.bam",
             bambai = "output/bam/{sample}.bam.bai"
@@ -291,7 +290,7 @@ if config["use_star"] == "FALSE":
             starttime = "Alignment starting date and time =" + dt_string
             ## Timestamp in log file, using datetime object containing current date and time
             ## ChIP-Seq alignment rules
-            if config["experiment"] == "chipseq" :
+            if config["experiment"] != "rnaseq" :
                 if config["type"] == "paired":
                     # Perform the alignment
                     # Splicing is not desired in cut&run and chipseq
@@ -319,22 +318,6 @@ if config["use_star"] == "FALSE":
                             --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
                             --no-spliced-alignment \
                             -S output/bam/{wildcards.sample}.sam 2> {log}") 
-            ## Cut&Run alignement rules
-            if config["experiment"] == "cutrun" :
-                if config["type"] == "paired":
-                    # Perform the alignment
-                    # Splicing is not desired in cut&run and chipseq
-                    shell("bowtie2 -p {threads} --dovetail --local --phred33 \
-                        {sensitivity_level} -x {params.bowtie2index} \
-                        -1 {input.trimmed_pair[0]} \
-                        -2 {input.trimmed_pair[1]} \
-                        2> {log} > \
-                        output/bam/{wildcards.sample}.sam")
-                if config["type"] == "single":        
-                    shell("bowtie2 -p {threads} --phred33 --local \
-                        {sensitivity_level} -x {params.bowtie2index} \
-                        -U {input.trimmed_pair[0]} 2> {log} > \
-                        output/bam/{wildcards.sample}.sam")
             ## RNA-seq alignment rules
             if config["experiment"] == "rnaseq" :
                 # Splicing is desired in rnaseq
@@ -416,6 +399,14 @@ if config["experiment"] != "rnaseq" :
                 2> {log}")
             if config["keep_unfiltered_bam"] == "FALSE":
                 shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")
+            ## Rule for calculating insert size for PE sequencing
+            if config["type"] == "paired":
+                shell("picard CollectInsertSizeMetrics \
+                    I=output/bam/{wildcards.sample}.unique.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
+                    H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
+                    M=0.05")
+
 
 # Remove and sort the multimapped reads from RNA-seq samples
 if config["experiment"] == "rnaseq":
@@ -434,6 +425,12 @@ if config["experiment"] == "rnaseq":
                     shell("samtools rmdup {input} {output} 2> {log}")
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")
+                ## Rule for calculating insert size for PE sequencing
+                shell("picard CollectInsertSizeMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
+                    H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
+                    M=0.05")
             else:
                 if config["use_UMI"] == "TRUE":
                     shell("umi_tools dedup --stdin={input} --log={log} > {output}")
