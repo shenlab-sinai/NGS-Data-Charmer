@@ -51,9 +51,27 @@ Copy the config.yaml, run\_snakemake\_cluster.sh, cluster.json and Snakefile to 
 ├── run_snakemake_cluster.sh
 └── Snakefile (required for all analyses)
 ```
-Make the required changes to the config.yaml and cluster.json file.
+Make the required changes to the config.yaml and cluster.json file. 
 
-Next, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
+Optionally, to utilize multiple cores on the cluster enviroment for computationally heavy tasks (such as alignment), you may change the number of cores utilized in the cluster.json file. Following is an example requesting 4 compute cores on a single node, asking 12GB of memory per core -
+
+```
+    "__default__" :
+    {  
+        "queue"     : "premium",
+        "allocation": "acc_Nestlerlab",
+        "n"         : 4,
+        "resources" : "\"rusage[mem=12000] span[ptile=4]\"",
+        "jobname"      : "{rule}.{wildcards}",
+        "output"    : "logs/{rule}.{wildcards}.o",
+        "error"     : "logs/{rule}.{wildcards}.e",
+        "walltime"    : "02:00"
+    }
+
+```
+You can make the above changes either to the '\__default\__' object alone or to any of the individual objects in the cluster.json file.
+
+Finally, type `nohup sh run_snakemake_cluster.sh &` (to run in background).
 
 ## Steps in RNA-seq pipeline:
 
