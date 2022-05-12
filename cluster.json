@@ -48,7 +48,8 @@
 
     "sortedbam_to_rmdup":
     {
-        "walltime"    : "04:00"
+        "memory"    : 35000,
+        "walltime"    : "06:00"
     },
 
     "rmdup_to_tdf":

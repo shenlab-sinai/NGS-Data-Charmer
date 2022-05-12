@@ -43,7 +43,8 @@ def choose_rule_all(config):
             expand('output/tdf/{sample}.unique.sorted.rmdup.tdf', 
                 sample=SAMPLES))
     if config["experiment"] == "rnaseq":
-        myout.append("output/counts_matrix.txt")
+        myout.append("output/counts_genic_matrix.txt")
+        myout.append("output/counts_exonic_matrix.txt")
     if config["experiment"] != "rnaseq":
         myout.extend(expand("output/trim_fastq/{sample}_R{reads}_trimmed.fq.gz", sample=SAMPLES, reads=[1,2]))
     return(myout)
@@ -417,6 +418,8 @@ if config["experiment"] == "rnaseq":
             "output/bam/{sample}.sorted.bam" if config["type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
         log:
             "output/logs/{sample}.rmdup.log"
+        params:
+            refflat = config["refflat"]
         run:
             if config["type"] == "paired":
                 if config["use_UMI"] == "TRUE":
@@ -431,13 +434,25 @@ if config["experiment"] == "rnaseq":
                     O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
                     H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
                     M=0.05")
+                if config["refflat"] != "FALSE":
+                    shell("picard CollectRnaSeqMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}.RNA_Metrics \
+                    REF_FLAT={params.refflat} \
+                    STRAND=SECOND_READ_TRANSCRIPTION_STRAND")
             else:
                 if config["use_UMI"] == "TRUE":
                     shell("umi_tools dedup --stdin={input} --log={log} > {output}")
                 else:
                     shell("cp {input} {output}")
                 if config["keep_unfiltered_bam"] == "FALSE":
-                    shell("rm -f {input} {input}.bai")            
+                    shell("rm -f {input} {input}.bai")
+                if config["refflat"] != "FALSE":
+                    shell("picard CollectRnaSeqMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.bam \
+                    O=output/logs/{wildcards.sample}.RNA_Metrics \
+                    REF_FLAT={params.refflat} \
+                    STRAND=FIRST_READ_TRANSCRIPTION_STRAND")
 
 # Additional rules for ChIP-seq
 # Create TDF files
@@ -499,48 +514,74 @@ rule sortedbam_to_counts:
     input:
         sorted_bam = "output/bam/{sample}.sorted.bam" if config["type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
     output:
-        counts = "output/counts/{sample}.counts.txt"
+        gene_counts = "output/counts/{sample}.gene.counts.txt",
+        exon_counts = "output/counts/{sample}.exon.counts.txt"
     params:
-        gtf = config["gtf"],
-        gene_scheme = config["gene_scheme"] # for example, "gene" or "exon"
+        gtf = config["gtf"]
     log:
         "output/logs/{sample}.feature_counts.log"
     run:
         if config["count_scheme"] == "fraction":
             if config["type"] == "paired":
-                shell("featureCounts -p -O --fraction  -t {params.gene_scheme} \
-                    -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -p -O --fraction  -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -O --fraction  -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
             if config["type"] == "single":
-                shell("featureCounts -O --fraction -t {params.gene_scheme} \
-                    -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -O --fraction -t gene \
+                    -a {params.gtf} -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -O --fraction -t exon \
+                    -a {params.gtf} -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
         elif config["count_scheme"] == "all_reads":
             if config["type"] == "paired":
-                shell("featureCounts -p -O -t {params.gene_scheme} -a {params.gtf} \
-                    -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -p -O -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -O -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
             if config["type"] == "single":
-                shell("featureCounts -O -t {params.gene_scheme} -a {params.gtf} \
-                    -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -O -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -O -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
         elif config["count_scheme"] == "unique_reads":
             if config["type"] == "paired":
-                shell("featureCounts -p -t {params.gene_scheme} -a {params.gtf} \
-                    -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -p -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
             if config["type"] == "single":
-                shell("featureCounts -t {params.gene_scheme} -a {params.gtf} \
-                    -o {output.counts} {input.sorted_bam} 2> {log}")
+                shell("featureCounts -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
 
 # Compile counts for RNA-seq
 rule counts_matrix:
     input:
-        counts = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
+        gene_counts = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES),
+        exon_counts = expand("output/counts/{sample}.exon.counts.txt", sample=SAMPLES)
     output:
-        "output/counts_matrix.txt"
+        gene_matrix = "output/counts_genic_matrix.txt",
+        exon_matrix = "output/counts_exonic_matrix.txt"
     run:
         import pandas as pd
         import platform
 
+        ## Process the genic counts
         dict_of_counts = {}
-
-        for file in input:
+        for file in input.gene_counts:
             sample = file.split(".")[0]
             if platform.system() != 'Windows':
                 sample = sample.split("/")[2]
@@ -548,7 +589,6 @@ rule counts_matrix:
                 sample = sample.split("\\")[2]
             
             dict_of_counts[sample] = {}
-            
             with open(file, "r") as infile:
                 next(infile)
                 next(infile)
@@ -559,18 +599,37 @@ rule counts_matrix:
         dataframe = pd.DataFrame(dict_of_counts)
         dataframe.to_csv(output[0], sep='\t')
 
+        ## Process the exonic counts
+        dict_of_counts = {}
+        for file in input.exon_counts:
+            sample = file.split(".")[0]
+            if platform.system() != 'Windows':
+                sample = sample.split("/")[2]
+            else:
+                sample = sample.split("\\")[2]
+            
+            dict_of_counts[sample] = {}
+            with open(file, "r") as infile:
+                next(infile)
+                next(infile)
+                for lines in infile:
+                    lines = lines.strip().split("\t")
+                    dict_of_counts[sample][lines[0]] = int(float(lines[-1]))
+
+        dataframe = pd.DataFrame(dict_of_counts)
+        dataframe.to_csv(output[1], sep='\t')
+
 rule fpkm_matrix:
     input:
-        counts = "output/counts_matrix.txt",
-        length = expand("output/counts/{sample}.counts.txt", sample=SAMPLES)
+        gene_counts = "output/counts_genic_matrix.txt",
+        exon_counts = "output/counts_exonic_matrix.txt",
+        length = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES)
     output:
-        "output/fpkm_matrix.txt"
+        gene_fpkm = "output/fpkm_genic_matrix.txt",
+        exon_fpkm = "output/fpkm_exonic_matrix.txt"
     run:
         import pandas as pd
-
-        # counts = pd.read_csv("output/counts_matrix.txt", sep='\t')
-        # gl = pd.read_csv("output/counts/example.counts.txt", comment='#', header=0, sep='\t')
-        counts = pd.read_csv(input.counts, sep='\t')
+        counts = pd.read_csv(input.gene_counts, sep='\t')
         gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
         counts.sort_values('Unnamed: 0',axis=0,inplace=True)
         gl.sort_values('Geneid',axis=0,inplace=True)
@@ -581,14 +640,29 @@ rule fpkm_matrix:
             colsum = counts_rev.copy().sum()/(10**6) # Sum count columns
             rpkm = counts_rev.divide(genelength,axis=0).divide(colsum,axis=1)
             dataframe = pd.concat([gl.iloc[:,0],rpkm],axis=1)
-            dataframe.to_csv(output[0], index=False, sep='\t')
+            dataframe.to_csv(output.gene_fpkm, index=False, sep='\t')
+        else:
+            print("Gene IDs not identically aligned\nFPKM cannot be generated.")
+
+        counts = pd.read_csv(input.exon_counts, sep='\t')
+        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        counts.sort_values('Unnamed: 0',axis=0,inplace=True)
+        gl.sort_values('Geneid',axis=0,inplace=True)
+
+        if gl.iloc[:,0].tolist()==counts.iloc[:,0].tolist():
+            genelength = gl["Length"].values/1000
+            counts_rev = counts.drop("Unnamed: 0", axis=1).copy() # remove identifier column
+            colsum = counts_rev.copy().sum()/(10**6) # Sum count columns
+            rpkm = counts_rev.divide(genelength,axis=0).divide(colsum,axis=1)
+            dataframe = pd.concat([gl.iloc[:,0],rpkm],axis=1)
+            dataframe.to_csv(output.exon_fpkm, index=False, sep='\t')
         else:
             print("Gene IDs not identically aligned\nFPKM cannot be generated.")
 
 # Create multiqc report (used for all workflows) 
 rule run_multiqc:
     input:
-        "output/fpkm_matrix.txt" if config["experiment"] == "rnaseq" else \
+        "output/fpkm_genic_matrix.txt" if config["experiment"] == "rnaseq" else \
         expand("output/bam/{sample}.unique.sorted.rmdup.chr.bam", sample=SAMPLES)
     output:
         multiqc_report = "output/multiqc_report.html"

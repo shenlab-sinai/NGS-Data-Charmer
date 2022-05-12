@@ -1,9 +1,9 @@
 #required arguments
-type: "single" # single or paired
+type: "paired" # single or paired
 
 experiment: "rnaseq" # chipseq or rnaseq or cutrun
 
-threads_for_alignment: 4 # May be increased to speed up alignment
+threads_for_alignment: 16 # May be increased to speed up alignment
 
 hisat2_index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 
@@ -11,7 +11,8 @@ ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folde
 
 trim_polyA: "FALSE" # Set to TRUE if RNAseq reads should be undergo trimming for polyA tails.
 
-use_very_sensitive: "TRUE" ## Set to TRUE if alignment step should use the "very sensitive" option.
+use_very_sensitive: "FALSE" ## Set to TRUE if alignment step should use the "very sensitive" option.
+##Note: Setting to "TRUE" may cause alignments to take a long time, adjust cluster.json walltime as needed.
 
 # Use of UMI -
 use_UMI: "FALSE"
@@ -24,20 +25,16 @@ chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for
 # http://software.broadinstitute.org/software/igv/chromSizes
 
 # ONLY FOR RNASEQ -
-gtf: "/path/to/gencode.vM22.annotation.gtf"
+gtf: "/path/to/hisat_genome/gencode.vM25.annotation.gtf"
 count_scheme: "fraction" # fraction or all_reads or unique_reads
-gene_scheme: "gene" # input to featureCount's "-t" parameter, which specifies
-                      # feature type(s) in a GTF annotation. If multiple
-                      # types are provided, they should be separated by ',' with
-                      # no space in between. Rows in the
-                      # annotation with a matched feature will be extracted and
-                      # used for read mapping.
+refflat: "/path/to/hisat_genome/gencode.vM25.annotation.refflat" ## Set to "FALSE" if picard CollectRnaSeqMetrics is undesired.
+## Note: refflat files can be generated from GTF files using the UCSC utility "gtfToGenePred"
 
 
 # OUTPUT options
 keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
 keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
-to_tdf: "TRUE" # Produce TDF files
+to_tdf: "FALSE" # Produce TDF files
 to_bed: "TRUE" # Produce bed files
 to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
 to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
