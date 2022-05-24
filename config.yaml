@@ -15,8 +15,9 @@ use_very_sensitive: "FALSE" ## Set to TRUE if alignment step should use the "ver
 ##Note: Setting to "TRUE" may cause alignments to take a long time, adjust cluster.json walltime as needed.
 
 # Use of UMI -
-## Note: Due to the overwhelming majority of UMI-barcoded libraries being from paired-end sequencing, the
-## UMI options here are only implemented for paired-end libraries.
+## Note: The use of UMI for deduplication is currently only implemented for RNAseq modes. Thus, the specification of 
+## chipseq or cutrun modes will not take advantage of the UMI barcodes for de-duplication purposes. This is
+## due to the current predominant use of UMI identifiers on RNAseq, and may be updated for broader functionality in the future.
 use_UMI: "TRUE" ##Set to "TRUE" if you wish to use umitools for umi extraction and de-duplication.
 UMI_read1_pattern: "X"
 ## Even if your UMI is present only on read2, you still need to set a pattern value for "UMI_read1_pattern".

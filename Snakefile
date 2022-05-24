@@ -201,7 +201,7 @@ rule trim_fastq_fastqc:
                 shell("rm ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz")
             if config["type"] == "single":
                 if config["use_UMI"] == "TRUE":
-                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_pattern} \
+                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.1} \
                         --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                 else:
                     # mv files to R1 and R2 ending in temporary directory
@@ -250,7 +250,7 @@ rule trim_fastq_fastqc:
                     output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
             if config["type"] == "single":
                 if config["use_UMI"] == "TRUE":
-                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_pattern} \
+                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_1} \
                         --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                 else:
                     # mv files to R1 and R2 ending in temporary directory
