@@ -164,13 +164,14 @@ rule trim_fastq_fastqc:
         "output/logs/{sample}.trim_adapters.log"
     params:
         pair2 = create_fastq_inputs(config)[1],
-        umi_pattern = config["UMI_pattern"]
+        umi_1 = config["UMI_read1_pattern"],
+        umi_2 = config["UMI_read2_pattern"]
     run:
         shell("mkdir -p output/temp_dir")
         if config['trim_polyA'] == "TRUE":
             if config["type"] == "paired":
                 if config["use_UMI"] == "TRUE":
-                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_pattern} \
+                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_1}  --bc-pattern2={params.umi_2} \
                     --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                     --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
                 else:
@@ -221,7 +222,7 @@ rule trim_fastq_fastqc:
         else:
             if config["type"] == "paired":
                 if config["use_UMI"] == "TRUE":
-                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_pattern} \
+                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_1}  --bc-pattern2={params.umi_2} \
                     --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                     --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
                 else:
