@@ -63,6 +63,10 @@ fn_ignore_dirs:
 fn_ignore_paths:
     - '*/path/to/*_files/'
 
+section_comments:
+  featurecounts: "Featurecounts mode: Assignment to exons"
+
+
 # Ignore files larger than this when searching for logs (bytes)
 log_filesize_limit: 5000000
 
@@ -92,6 +96,8 @@ sp:
         fn: '*Log.final.out'
     trimmomatic:
         contents: 'Trimmomatic'
+    featurecounts:
+        fn: '*.exon.counts.txt.summary'
 
 
 # Specify a custom logo to add to reports (uncomment to use)

@@ -15,8 +15,17 @@ use_very_sensitive: "FALSE" ## Set to TRUE if alignment step should use the "ver
 ##Note: Setting to "TRUE" may cause alignments to take a long time, adjust cluster.json walltime as needed.
 
 # Use of UMI -
-use_UMI: "FALSE"
-UMI_pattern: "NNNXXXXNN"
+## Note: Due to the overwhelming majority of UMI-barcoded libraries being from paired-end sequencing, the
+## UMI options here are only implemented for paired-end libraries.
+use_UMI: "TRUE" ##Set to "TRUE" if you wish to use umitools for umi extraction and de-duplication.
+UMI_read1_pattern: "X"
+## Even if your UMI is present only on read2, you still need to set a pattern value for "UMI_read1_pattern".
+## This requirement is due to umitools expecting at least some input for the read1 pattern.
+## Set "UMI_read1_pattern" to the value "X" if your UMI pattern is on read2.
+## This will cause it to look for, then ignore, the first 5' base on read1.
+UMI_read2_pattern: "NNNNNNNN"
+## See https://umi-tools.readthedocs.io/en/latest/ for informaton on "umi_tools extract" parameters
+
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
