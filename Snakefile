@@ -201,7 +201,7 @@ rule trim_fastq_fastqc:
                 shell("rm ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz")
             if config["type"] == "single":
                 if config["use_UMI"] == "TRUE":
-                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.1} \
+                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_1} \
                         --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                 else:
                     # mv files to R1 and R2 ending in temporary directory
@@ -397,8 +397,10 @@ if config["experiment"] != "rnaseq" :
         log:
             "output/logs/{sample}.rmdup.log"
         run:
-            shell("samtools rmdup {input.sorted_bam} {output.dup_removed} \
-                2> {log}")
+            # shell("samtools markdup -r {input.sorted_bam} {output.dup_removed} 2> {log}")
+            shell("picard MarkDuplicates --REMOVE_DUPLICATES true I={input.sorted_bam} O={output.dup_removed} \
+                M=output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
+
             if config["keep_unfiltered_bam"] == "FALSE":
                 shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")
             ## Rule for calculating insert size for PE sequencing
@@ -426,7 +428,10 @@ if config["experiment"] == "rnaseq":
                 if config["use_UMI"] == "TRUE":
                     shell("umi_tools dedup --stdin={input} --log={log} --paired --unmapped-reads=use > {output}")
                 else:
-                    shell("samtools rmdup {input} {output} 2> {log}")
+                    # shell("samtools markdup -r {input} {output} 2> {log}")
+                    shell("picard MarkDuplicates REMOVE_DUPLICATES=true I={input} O={output} \
+                        M=output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
+
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")
                 ## Rule for calculating insert size for PE sequencing
