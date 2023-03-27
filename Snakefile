@@ -1,32 +1,35 @@
 import os
 import sys
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 import re
 from Bio import SeqIO
 import gzip
 from collections import Counter
+from datetime import datetime
 
 configfile: "config.yaml"
 myfastqpath = "fastq/"
 sys.path.append(config["ngs_path"]) # needed to correctly find helper script
 import ngs_helper.ngs_helper as ngs_helper #provides the helper functions
 
-# HELPER FUNCTIONS
+## HELPER FUNCTIONS
 # Create function for creating rule sets
-
 def choose_rule_all(config):
     """
     Selects the input needed for 'rule all' in snakemake pipeline
+
     Input Parameter: 
     config (dict): Dictionary derived from config.yaml and any additional 
     key:value pairs added during the file preperation steps. 
+
     Returns:
     list: List of required input files for 'rule all'. 
     """
     myout = []
     if config["to_multiqc"] == "TRUE":
         myout.append("output/multiqc_report.html")
+        # myout.append(expand("output/bam/{sample}.unique.sorted.rmdup.chr.bam", sample=SAMPLES))
     if config["to_bw"] == "TRUE" and config["experiment"] != "rnaseq":
         myout.append(
             expand('output/bw/{sample}.unique.sorted.rmdup.chr.bw', 
@@ -40,31 +43,32 @@ def choose_rule_all(config):
             expand('output/tdf/{sample}.unique.sorted.rmdup.tdf', 
                 sample=SAMPLES))
     if config["experiment"] == "rnaseq":
-        myout.append("output/counts_matrix.txt")
+        myout.append("output/counts_genic_matrix.txt")
+        myout.append("output/counts_exonic_matrix.txt")
+    # if config["experiment"] != "rnaseq":
+    #     myout.extend(expand("output/trim_fastq/{sample}_R{reads}_trimmed.fq.gz", sample=SAMPLES, reads=[1,2]))
     return(myout)
 
 # Create read-pair inputs for sample processing
-
-
-def create_inputs(config):
+def create_fastq_inputs(config):
     """
     Creates the fastq file inputs needed for read trimming steps of 
     the snakemake pipeline
+
     Input Parameter: 
     config (dict): Dictionary derived from config.yaml and any 
     additional key:value pairs added during the file preperation steps. 
+
     Returns:
     list: List of two strings; 
     1st string denotes the forward read
     2nd string denotes the reverse read
     """
-    return([("fastq/{sample}" + expand("{ending}{suffix}", \
-            ending=R1_file_ending, suffix=suffix)[0]+""),
-            ("fastq/{sample}" + expand("{ending}{suffix}", \
+    return([os.path.join("fastq","{sample}"+expand("{ending}{suffix}", \
+        ending=R1_file_ending, suffix=suffix)[0]+""),
+        os.path.join("fastq","{sample}"+expand("{ending}{suffix}", \
             ending=R2_file_ending, suffix=suffix)[0]+"")])
-
-# End helper functions
-
+## End helper functions
 
 # Retrieve the list of fastq files
 onlyfiles, gzfiles = ngs_helper.getfilelist(myfastqpath)
@@ -90,7 +94,7 @@ else:
             ngs_helper.fix_input_files("", onlyfiles, myfastqpath)
     suffix = ""
 
-sample_string = myfastqpath + "{sample}" + R1_file_ending + suffix
+sample_string = os.path.join("fastq","{sample}"+R1_file_ending+suffix)
 SAMPLES, = glob_wildcards(sample_string)
 
 # Check the file pairing
@@ -100,9 +104,9 @@ if config["type"] == "single":
 elif config["type"] == "paired":
     len_r1 = len([i for i in onlyfiles if i.endswith(R1_file_ending + suffix)])
     if len_r1*2 != len(onlyfiles):
-        myinput = ("One or more samples do not have a read pair!\n"
-            "If using paired-end samples, please ensure "
-            "each sample has read 1 and read 2 files. \nAborting...")
+        myinput = "One or more samples do not have a read pair!\nIf using \
+            paired-end samples, please ensure each sample has read 1 and \
+            read 2 files\nAborting..."
         raise NameError(myinput)  # Raise exception to break workflow
 else:
     myinput = "You have specified unknown read type: " + \
@@ -112,457 +116,376 @@ else:
 
 # Retrieve cut&run read lengths for use as parameters
 if len(gzfiles) > 0 and config["experiment"] == "cutrun":
-    config["read_length"], config["read_length_max"] = \
+    read_length, read_length_max = \
     ngs_helper.check_readlength(suffix, gzfiles, R1_file_ending, myfastqpath)
 elif len(gzfiles) == 0 and config["experiment"] == "cutrun": 
-    config["read_length"], config["read_length_max"] = \
+    read_length, read_length_max = \
     ngs_helper.check_readlength(suffix, onlyfiles, R1_file_ending, myfastqpath)
 
+## Determine if genome index should be built for STAR aligner
+if config["use_star"] == "TRUE":
+    #verify that star index exists
+    if isfile(os.path.join(config["star_indexloc"],"genomeParameters.txt")):
+        print("Using STAR index in "+config["star_indexloc"])
+    else:
+        # verify that fasta needed for genome does exist
+        if isfile(config["genome_fasta"]):
+            star_index_needed="TRUE"        
+            if isdir(config["star_indexloc"]):
+                print("STAR index will be created in\n"+config["star_indexloc"])
+            else:
+                config["star_indexloc"]="index/"
+        else:
+            print("Fasta file specified for creating STAR index was invalid. Now exiting...")
+            raise NameError(print(config["genome_fasta"]))
+
+## Set up the alignment sensitivity parameter
+if config["use_very_sensitive"] == "TRUE":
+    sensitivity_level = "--very-sensitive"
+else:
+    sensitivity_level = ""
+
+##### RULES SECTION
 # Generate input rule for Snakemake
 rule all:
     input:
         choose_rule_all(config)
 
-config["suffix"] = suffix
-
-if config["experiment"] == "cutrun":
-    # Begin Snakemake pre-processing for Cut&Run samples
-    if config["type"] == "paired":
-        rule trim_fastq_fastqc:
-            input:
-                pair1 = (join(myfastqpath, "{sample}") + expand(
-                    "{ending}{suffix}", ending=R1_file_ending, suffix=suffix)[0]),
-                pair2 = (join(myfastqpath, "{sample}") + expand(
-                    "{ending}{suffix}", ending=R2_file_ending, suffix=suffix)[0])
-            output:
-                trimmed_pair1 = temp(
-                    "output/trim_fastq/{sample}_R1_val_1.fq.gz"),
-                trimmed_pair2 = temp(
-                    "output/trim_fastq/{sample}_R2_val_2.fq.gz"),
-                fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
-                fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"
-            log:
-                "output/logs/{sample}.trim_adapters.log"
-            params:
-                config["suffix"]
-            run:
-                # mv files to R1 and R2 ending in temporary directory
-                shell("mkdir -p output/temp_dir")
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params}")
-                shell("cp {input.pair2} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params}")
+## Select correct rule(s) for trimming reads
+rule trim_fastq_fastqc:
+    input:
+        pair1 = create_fastq_inputs(config)[0]
+    output:
+        trimmed_pair1 = temp("output/trim_fastq/{sample}_R1_trimmed.fq.gz"),
+        trimmed_pair2 = temp("output/trim_fastq/{sample}_R2_trimmed.fq.gz"),
+        fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
+        fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"
+    log:
+        "output/logs/{sample}.trim_adapters.log"
+    params:
+        pair2 = create_fastq_inputs(config)[1],
+        umi_1 = config["UMI_read1_pattern"],
+        umi_2 = config["UMI_read2_pattern"]
+    run:
+        shell("mkdir -p output/temp_dir")
+        if config['trim_polyA'] == "TRUE":
+            if config["type"] == "paired":
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_1}  --bc-pattern2={params.umi_2} \
+                    --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                else:
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("cp {params.pair2} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
                 shell("trim_galore \
-                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{params} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params} --paired \
+                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired \
                     -o ./output/trim_fastq")
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params} \
-                    -o ./output/fastqc")
-
-    if config["type"] == "single":
-        rule trim_fastq_fastqc:
-            input:
-                pair1 = create_inputs(config)[0]
-            output:
-                trimmed_pair1 = temp(
-                    "output/trim_fastq/{sample}_R1_val_1.fq.gz"),
-                trimmed_pair2 = temp(
-                    "output/trim_fastq/{sample}_R2_val_2.fq.gz"),
-                fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
-                fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"
-            log:
-                "output/logs/{sample}.trim_adapters.log"
-            params:
-                config["suffix"]
-            run:
-                # mv files to R1 and R2 ending in temporary directory
-                shell("mkdir -p output/temp_dir")
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params}")
                 shell("trim_galore \
-                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{params} \
+                    ./output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz \
+                    ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz --paired --polyA \
+                     --basename {wildcards.sample}_pat")
+                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
+                    -o ./output/fastqc")
+                shell("mv ./{wildcards.sample}_pat_val_1.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
+                shell("mv ./{wildcards.sample}_pat_val_2.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+                shell("mv {wildcards.sample}_R2_val_2.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                shell("mv {wildcards.sample}_R1_val_1.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                shell("rm ./output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
+                shell("rm ./output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz")
+            if config["type"] == "single":
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_1} \
+                        --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                else:
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                shell("trim_galore \
+                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                     -o ./output/trim_fastq --basename {wildcards.sample}")
-                shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz \
-                    output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz")
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
+                shell("trim_galore --polyA \
+                    ./output/trim_fastq/{wildcards.sample}_trimmed.fq.gz ") # new rule --basename {wildcards.sample}_pat
+                shell("mv {wildcards.sample}_trimmed_trimmed.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz")
+                shell("mv {wildcards.sample}_trimmed.fq.gz_trimming_report.txt ./output/trim_fastq/")
+                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                     -o ./output/fastqc")
                 shell("touch {output.trimmed_pair2}")
                 shell("touch {output.fastqc_zipfile2}")
-
-    rule split_length_long:
-        input:
-            trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
-            trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
-        output:
-            cut_r1_p1 = temp("output/trim_fastq/{sample}_t1_R1.len75.fastq"),
-            cut_r2_p1 = temp("output/trim_fastq/{sample}_t1_R2.len75.fastq")
-        params:
-            read_length = config["read_length"],
-            suffix = config["suffix"]
-        log:
-            "output/logs/{sample}.split_length_keeplong.log"
-        run:
-            #This step removes the temporary files in "output/temp_dir"
+        else:
             if config["type"] == "paired":
-                shell("cutadapt --minimum-length {params.read_length} \
-                    -o {output.cut_r1_p1} {input.trimg_pair1}"),
-                shell("cutadapt --minimum-length {params.read_length} \
-                    -o {output.cut_r2_p1} {input.trimg_pair2}")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R2.fq{params.suffix}")
-            else:
-                shell("cutadapt --minimum-length {params.read_length} \
-                    -o {output.cut_r1_p1} {input.trimg_pair1}")
-                shell("touch {output.cut_r2_p1}")
-                shell("rm output/fastqc/{wildcards.sample}_R2_fastqc.zip")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
-
-    rule split_length_short:
-        input:
-            trimg_pair1 = "output/trim_fastq/{sample}_R1_val_1.fq.gz",
-            trimg_pair2 = "output/trim_fastq/{sample}_R2_val_2.fq.gz"
-        output:
-            cut_r1_p2 = temp("output/trim_fastq/{sample}_t1_R1.lt75.fastq"),
-            cut_r2_p2 = temp("output/trim_fastq/{sample}_t1_R2.lt75.fastq")
-        params:
-            read_length = config["read_length_max"]
-        log:
-            "output/logs/{sample}.split_length_keepshort.log"
-        run:
-            if config["type"] == "paired":
-                shell("cutadapt --maximum-length {params.read_length} \
-                    -o {output.cut_r1_p2} {input.trimg_pair1}"),
-                shell("cutadapt --maximum-length {params.read_length} \
-                    -o {output.cut_r2_p2} {input.trimg_pair2}")
-            else:
-                shell("cutadapt --maximum-length {params.read_length} \
-                    -o {output.cut_r1_p2} {input.trimg_pair1}")
-                shell("touch {output.cut_r2_p2}")
-
-    rule trim_long:
-        input:
-            cut_r1_p1 = "output/trim_fastq/{sample}_t1_R1.len75.fastq",
-            cut_r2_p1 = "output/trim_fastq/{sample}_t1_R2.len75.fastq"
-        output:
-            cut_r1_p3 = temp(
-                "output/trim_fastq/{sample}_t1_R1.len75_trim.fastq"),
-            cut_r2_p3 = temp(
-                "output/trim_fastq/{sample}_t1_R2.len75_trim.fastq")
-        log:
-            "output/logs/{sample}.trim_long.log"
-        run:
-            if config["type"] == "paired":
-                shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}"),
-                shell("cutadapt -u -6 -o {output.cut_r2_p3} {input.cut_r2_p1}")
-            else:
-                shell("cutadapt -u -6 -o {output.cut_r1_p3} {input.cut_r1_p1}"),
-                shell("touch {output.cut_r2_p3}")
-
-    rule combine_split_lengths:
-        input:
-            cut_r1_p3 = "output/trim_fastq/{sample}_t1_R1.len75_trim.fastq",
-            cut_r2_p3 = "output/trim_fastq/{sample}_t1_R2.len75_trim.fastq",
-            cut_r1_p2 = "output/trim_fastq/{sample}_t1_R1.lt75.fastq",
-            cut_r2_p2 = "output/trim_fastq/{sample}_t1_R2.lt75.fastq"
-        output:
-            cut_r1_p4 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
-            cut_r2_p4 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
-        run:
-            if config["type"] == "paired":
-                shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > \
-                    output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
-                shell("cat {input.cut_r2_p3} {input.cut_r2_p2} > \
-                    output/trim_fastq/{wildcards.sample}_t2_R2.fastq"),
-                shell("cat output/trim_fastq/{wildcards.sample}_t2_R1.fastq \
-                    | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
-                shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
-                    output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq \
-                    | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
-                shell("rm output/trim_fastq/{wildcards.sample}_t2_R1_flat.fastq"),
-                shell("cat output/trim_fastq/{wildcards.sample}_t2_R2.fastq \
-                    | paste - - - - > output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
-                shell("sort -k1,1 -T output/trim_fastq --parallel=4 -t \" \" \
-                    output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq \
-                    | tr \"\t\" \"\\n\" > output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
-                shell("rm output/trim_fastq/{wildcards.sample}_t2_R2_flat.fastq"),
-                shell(
-                    "gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq"),
-                shell(
-                    "gzip output/trim_fastq/{wildcards.sample}_R2_trimmed.fq"),
-                shell("rm output/trim_fastq/{wildcards.sample}_t2_R1.fastq"),
-                shell("rm output/trim_fastq/{wildcards.sample}_t2_R2.fastq")
-            else:
-                shell("cat {input.cut_r1_p3} {input.cut_r1_p2} > \
-                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
-                shell("gzip output/trim_fastq/{wildcards.sample}_R1_trimmed.fq")
-                shell("touch {output.cut_r2_p4}")
-    # end pre-processing for cut and run samples
-
-    # Alignment for cut and run samples
-    rule bowtie2:
-        input:
-            trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
-            trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
-        params:
-            index = config["bowtie2_index"]
-        output:
-            bam = temp("output/bam/{sample}.sorted.bam"),
-            bambai = temp("output/bam/{sample}.sorted.bam.bai")
-        threads:
-            config["threads_for_alignment"]
-        log:
-            "output/logs/{sample}.alignment.log"
-        run:
-            if config["type"] == "paired":
-                shell("bowtie2 -p {threads} --dovetail --phred33 \
-                    -x {params.index} -1 {input.trimmed_pair1} \
-                    -2 {input.trimmed_pair2} 2> {log} > \
-                    output/bam/{wildcards.sample}.sam"),
-                shell("samtools sort output/bam/{wildcards.sample}.sam \
-                    | samtools view -bS - > output/bam/{wildcards.sample}.bam"),
-                shell("rm output/bam/{wildcards.sample}.sam"),
-                shell("samtools index output/bam/{wildcards.sample}.bam")
-            else:
-                shell("bowtie2 -p {threads} --dovetail --phred33 \
-                    -x {params.index} -U {input.trimmed_pair1} \
-                    2> {log} > output/bam/{wildcards.sample}.sam"),
-                shell("samtools sort output/bam/{wildcards.sample}.sam \
-                    | samtools view -bS - > output/bam/{wildcards.sample}.bam"),
-                shell("rm output/bam/{wildcards.sample}.sam"),
-                shell("samtools index output/bam/{wildcards.sample}.bam")
-                shell("rm {input.trimmed_pair2}")
-            if config["keep_fastq"] == "FALSE" and config["type"] == "paired":
-                shell("rm {input.trimmed_pair1} {input.trimmed_pair2}")
-            elif config["keep_fastq"] == "FALSE" and config["type"] == "single":
-                shell("rm {input.trimmed_pair1}")
-            # Now sorting the bam file
-            shell("samtools view -bh -f 3 -F 4 -F 8 \
-                output/bam/{wildcards.sample}.bam > \
-                output/bam/{wildcards.sample}_mapped.bam")
-            shell("samtools index output/bam/{wildcards.sample}_mapped.bam")
-            shell("samtools sort output/bam/{wildcards.sample}_mapped.bam > \
-                output/bam/{wildcards.sample}.sorted.bam")
-            shell("samtools index output/bam/{wildcards.sample}.sorted.bam")
-            shell("rm output/bam/{wildcards.sample}_mapped.bam*")
-            if config["keep_unfiltered_bam"] == "FALSE":
-                shell("rm output/bam/{wildcards.sample}.bam")
-                shell("rm output/bam/{wildcards.sample}.bam.bai")
-
-    # This rule removes duplicate alignments from Cut and Run samples
-    rule rmdup:
-        input:
-            "output/bam/{sample}.sorted.bam"
-        output:
-            bam = "output/bam/{sample}.unique.sorted.rmdup.bam",
-            bambai = "output/bam/{sample}.unique.sorted.rmdup.bam.bai"
-        log:
-            "output/logs/{sample}.rmdup.log"
-        run:
-            shell("samtools rmdup {input} {output.bam} 2> {log}")
-            shell("samtools index {output.bam}")
-
-
-# Pre-process RNA-seq or Chip-seq samples
-if config["experiment"] == "rnaseq" or config["experiment"] == "chipseq":
-    if config["type"] == "paired":
-        # Trim adaptors from paired-end fastq files
-        rule trim_fastq_fastqc:
-            input:
-                pair1 = create_inputs(config)[0],
-                pair2 = create_inputs(config)[1]
-            output:
-                trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
-                trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz",
-                fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip",
-                fastqc_zipfile2 = "output/fastqc/{sample}_R2_fastqc.zip"
-            log:
-                "output/logs/{sample}.trim_adapters.log"
-            params:
-                config["suffix"]
-            run:
-                shell("mkdir -p output/temp_dir")
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params}")
-                shell("cp {input.pair2} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params}")
-                shell("trim_galore \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params} --paired --gzip \
-                    -o ./output/trim_fastq")
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
-                    output/temp_dir/{wildcards.sample}_R2.fq{params} -o ./output/fastqc")
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools extract -I {input.pair1} --bc-pattern={params.umi_1}  --bc-pattern2={params.umi_2} \
+                    --read2-in={params.pair2} --stdout=output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    --read2-out=output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                else:
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                    shell("cp {params.pair2} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+                if config["experiment"] == "cutrun":
+                    shell("trim_galore --clip_R1 6 --clip_R2 6 \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired --trim-n \
+                        -o ./output/trim_fastq")
+                else:
+                    shell("trim_galore \
+                        --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                        output/temp_dir/{wildcards.sample}_R2.fq{suffix} --paired --trim-n \
+                        -o ./output/trim_fastq")
+                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    output/temp_dir/{wildcards.sample}_R2.fq{suffix} \
+                    -o ./output/fastqc")
                 shell("mv output/trim_fastq/{wildcards.sample}_R1_val_1.fq.gz \
                     output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz"),
                 shell("mv output/trim_fastq/{wildcards.sample}_R2_val_2.fq.gz \
                     output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
-
-        # Align paired-end trimmed reads to genome
-        rule fastq_to_bam:
-            input:
-                trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
-                trimmed_pair2 = "output/trim_fastq/{sample}_R2_trimmed.fq.gz"
-            params:
-                index = config["index"],
-                suffix = config["suffix"]
-            output:
-                bam = "output/bam/{sample}.bam",
-                bambai = "output/bam/{sample}.bam.bai"
-            threads: config["threads_for_alignment"]
-            log:
-                "output/logs/{sample}.alignment.log"
-            run:
-                if config["cufflinks_bam"] == "FALSE":
-                    shell("hisat2 -p {threads} -x {params.index} \
-                        -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} \
-                        -S output/bam/{wildcards.sample}.sam 2> {log}")
+            if config["type"] == "single":
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools extract --stdin={input.pair1} --bc-pattern={params.umi_1} \
+                        --log={log} --stdout output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
                 else:
-                    shell("hisat2 -p {threads} -x {params.index} \
-                        --pen-noncansplice 1000000 \
-                        -1 {input.trimmed_pair1} -2 {input.trimmed_pair2} \
-                        -S output/bam/{wildcards.sample}.sam 2> {log}")                    
-                shell("samtools sort output/bam/{wildcards.sample}.sam | \
-                    samtools view -bS - > {output.bam}"),
-                shell("samtools index {output.bam}")
-                shell("rm output/bam/{wildcards.sample}.sam")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R2.fq{params.suffix}")
-                if config["keep_fastq"] == "FALSE":
-                    shell("rm {input.trimmed_pair1} {input.trimmed_pair2}")
-
-
-    elif config["type"] == "single":
-        # Trim adaptors from single-end fastq files
-        rule trim_fastq_fastqc:
-            input:
-                pair1 = create_inputs(config)[0]
-            output:
-                trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz",
-                fastqc_zipfile1 = "output/fastqc/{sample}_R1_fastqc.zip"
-            log:
-                "output/logs/{sample}.trim_adapters.log"
-            params:
-                config["suffix"]
-            run:
-                shell("mkdir -p output/temp_dir")
-                shell("cp {input.pair1} \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params}")
-                shell("trim_galore \
-                    output/temp_dir/{wildcards.sample}_R1.fq{params} --gzip \
-                    -o ./output/trim_fastq"),
-                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{params} \
+                    # mv files to R1 and R2 ending in temporary directory
+                    shell("cp {input.pair1} \
+                        output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                shell("trim_galore --trim-n \
+                    --gzip output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
+                    -o ./output/trim_fastq --basename {wildcards.sample}")
+                shell("mv output/trim_fastq/{wildcards.sample}_trimmed.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz")
+                shell("fastqc output/temp_dir/{wildcards.sample}_R1.fq{suffix} \
                     -o ./output/fastqc")
+                shell("touch {output.trimmed_pair2}")
+                shell("touch {output.fastqc_zipfile2}")
 
-        # Align trimmed single-end reads to genome
-        rule fastq_to_bam:
-            input:
-                trimmed_pair1 = "output/trim_fastq/{sample}_R1_trimmed.fq.gz"
-            params:
-                index = config["index"],
-                suffix = config["suffix"]
-            output:
-                bam = "output/bam/{sample}.bam",
-                bambai = "output/bam/{sample}.bam.bai"
-            threads: config["threads_for_alignment"]
-            log:
-                "output/logs/{sample}.alignment.log"
-            run:
-                if config["cufflinks_bam"] == "FALSE":
-                    shell("hisat2 -p {threads} -x {params.index} \
-                        -U {input.trimmed_pair1} \
-                        -S output/bam/{wildcards.sample}.sam 2> {log}")
-                else:
-                    shell("hisat2 -p {threads} -x {params.index} \
-                        --pen-noncansplice 1000000 -U {input.trimmed_pair1} \
-                        -S output/bam/{wildcards.sample}.sam 2> {log}")                    
-                shell("samtools sort output/bam/{wildcards.sample}.sam | \
-                    samtools view -bS - > {output.bam}"),
-                shell("rm output/bam/{wildcards.sample}.sam"),
-                shell("samtools index {output.bam}")
-                shell(
-                    "rm output/temp_dir/{wildcards.sample}_R1.fq{params.suffix}")
-                if config["keep_fastq"] == "FALSE":
-                    shell("rm {input.trimmed_pair1}")
-    # Common pre-processing of ChiP-seq and RNA-seq reads complete
+## Select correct rules for aligning reads
+if config["use_star"] == "TRUE":
+    # ruleorder: bam_to_unique_mapped > fastq_to_bam_STAR
+    include: os.path.join(config["ngs_path"],"star_rules.snake")
 
-    if config["experiment"] == "chipseq":
-        # Remove and sort the multimapped reads from ChIP-seq samples
-        rule bam_to_unique_mapped:
-            input:
-                "output/bam/{sample}.bam"
-            output:
-                bam = temp("output/bam/{sample}.sorted.bam")
-            run:
+if config["use_star"] == "FALSE":
+    rule fastq_to_bam_HISAT:
+        input:
+            trimmed_pair = ["output/trim_fastq/{sample}_R1_trimmed.fq.gz", \
+                            "output/trim_fastq/{sample}_R2_trimmed.fq.gz"]
+        params:
+            hisat2index = config["hisat2_index"]
+        output:
+            bam = "output/bam/{sample}.bam",
+            bambai = "output/bam/{sample}.bam.bai"
+        threads: config["threads_for_alignment"]
+        log:
+            "output/logs/{sample}.alignment.log"
+        run:
+            timelog="output/logs/"+wildcards.sample+".alignment.log"
+            # print(timelog)
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            starttime = "Alignment starting date and time =" + dt_string
+            ## Timestamp in log file, using datetime object containing current date and time
+            ## ChIP-Seq alignment rules
+            if config["experiment"] != "rnaseq" :
                 if config["type"] == "paired":
-                    # mapped with pair, unique
+                    # Perform the alignment
+                    # Splicing is not desired in cut&run and chipseq
+                    if config["cufflinks_bam"] == "FALSE" :
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            -1 {input.trimmed_pair[0]} \
+                            -2 {input.trimmed_pair[1]} \
+                            --no-spliced-alignment \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                    else:
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            --pen-noncansplice 1000000 \
+                            --no-spliced-alignment \
+                            -1 {input.trimmed_pair[0]} \
+                            -2 {input.trimmed_pair[1]} \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                if config["type"] == "single":        
+                    if config["cufflinks_bam"] == "FALSE":
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            -U {input.trimmed_pair[0]} \
+                            --no-spliced-alignment \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                    else:
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
+                            --no-spliced-alignment \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}") 
+            ## RNA-seq alignment rules
+            if config["experiment"] == "rnaseq" :
+                # Splicing is desired in rnaseq
+                if config["type"] == "paired":
+                    if config["cufflinks_bam"] == "FALSE" :
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                    else:
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            --pen-noncansplice 1000000 \
+                            -1 {input.trimmed_pair[0]} -2 {input.trimmed_pair[1]} \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                if config["type"] == "single":        
+                    if config["cufflinks_bam"] == "FALSE":
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            -U {input.trimmed_pair[0]} \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+                    else:
+                        shell("hisat2 -p {threads} {sensitivity_level} -x {params.hisat2index} \
+                            --pen-noncansplice 1000000 -U {input.trimmed_pair[0]} \
+                            -S output/bam/{wildcards.sample}.sam 2> {log}")
+            # Timestamp in log file
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            endtime = "Alignment ending date and time =" + dt_string
+            with open(timelog, 'a') as f:
+                print(starttime, file=f)
+                print(endtime, file=f)
+            #
+            ## Convert and cleanup the alignment files                             
+            shell("samtools sort -@ 8 -O BAM -o {output.bam} output/bam/{wildcards.sample}.sam")
+            shell("rm output/bam/{wildcards.sample}.sam")
+            shell("samtools index {output.bam}")
+            if config["experiment"] != "cutrun" :
+                shell("rm output/temp_dir/{wildcards.sample}_R1.fq{suffix}")
+                if config["type"] == "paired":
+                    shell("rm output/temp_dir/{wildcards.sample}_R2.fq{suffix}")
+            if config["keep_fastq"] == "FALSE":
+                shell("rm output/trim_fastq/{wildcards.sample}_R1_trimmed.fq.gz \
+                    output/trim_fastq/{wildcards.sample}_R2_trimmed.fq.gz")
+
+# Remove and sort the multimapped reads from ChIP-seq and cut&run samples
+if config["experiment"] != "rnaseq" :
+    rule bam_to_unique_mapped:
+        input:
+            "output/bam/{sample}.bam"
+        output:
+            bam = temp("output/bam/{sample}.sorted.bam")
+        run:
+            if config["type"] == "paired":
+                if config["experiment"] == "chipseq" :
+	            # mapped with pair, unique
                     shell("samtools view -bh -f 3 -F 4 -F 8 -F 256 {input} > \
-                        output/bam/{wildcards.sample}_filtered.bam")
+                       output/bam/{wildcards.sample}_filtered.bam")
+                    shell("samtools sort -O BAM -o {output.bam} \
+                    	output/bam/{wildcards.sample}_filtered.bam")
+	            shell("rm output/bam/{wildcards.sample}_filtered.bam")
+                if config["experiment"] == "cutrun" :
+                    ## Split file mapped pairs into discordant/cordant components
+                    shell("samtools view -bh -f 3 -F 4 -F 8 -F 256 {input} > \
+                        output/bam/{wildcards.sample}_mapped_paired.bam")
+                    shell("samtools view -bh -f 1 -F 2 -F 4 -F 8 -F 256 {input} > \
+                        output/bam/{wildcards.sample}_mapped_dis.bam")
+                    ## remove overlapping bases from discordant pairs
+                    shell("bam clipOverlap --in output/bam/{wildcards.sample}_mapped_dis.bam --out \
+                        output/bam/{wildcards.sample}_clipped_dis.bam --stats --overlapsOnly")
+                    ## combine non-discord and filtered discordant pairs
+                    shell("samtools merge -f -@ 4 output/bam/{wildcards.sample}_filtered.bam \
+                                output/bam/{wildcards.sample}_mapped_paired.bam \
+                                output/bam/{wildcards.sample}_clipped_dis.bam")
+                    ## sort combined bam file
                     shell("samtools sort -O BAM -o {output.bam} \
                         output/bam/{wildcards.sample}_filtered.bam")
-                    shell("rm output/bam/{wildcards.sample}_filtered.bam")
+                    shell("rm output/bam/{wildcards.sample}_filtered.bam \
+                        output/bam/{wildcards.sample}_mapped_paired.bam \
+                        output/bam/{wildcards.sample}_mapped_dis.bam \
+                        output/bam/{wildcards.sample}_clipped_dis.bam")
+            else:
+                # mapped with pair, unique locations
+                shell("samtools view -bh -F 4 -F 256 {input} > \
+                    output/bam/{wildcards.sample}_filtered.bam")
+                shell("samtools sort -O BAM -o {output.bam} \
+                    output/bam/{wildcards.sample}_filtered.bam")
+                shell("rm output/bam/{wildcards.sample}_filtered.bam")
+            if config["keep_unfiltered_bam"] == "FALSE":
+                shell("rm output/bam/{wildcards.sample}.bam \
+                    output/bam/{wildcards.sample}.bam.bai")
+
+    # Remove duplicate reads 
+    rule sortedbam_to_rmdup:
+        input:
+            sorted_bam = "output/bam/{sample}.sorted.bam"
+        output:
+            dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
+        log:
+            "output/logs/{sample}.rmdup.log"
+        run:
+            # shell("samtools markdup -r {input.sorted_bam} {output.dup_removed} 2> {log}")
+            shell("picard MarkDuplicates --REMOVE_DUPLICATES true -I {input.sorted_bam} -O {output.dup_removed} \
+                -M output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
+
+            if config["keep_unfiltered_bam"] == "FALSE":
+                shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")
+            ## Rule for calculating insert size for PE sequencing
+            if config["type"] == "paired":
+                shell("picard CollectInsertSizeMetrics \
+                    I=output/bam/{wildcards.sample}.unique.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
+                    H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
+                    M=0.05")
+
+
+# Remove and sort the multimapped reads from RNA-seq samples
+if config["experiment"] == "rnaseq":
+    rule sortedbam_to_rmdup:
+        input:
+            "output/bam/{sample}.bam"
+        output:
+            "output/bam/{sample}.sorted.bam" if config["type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
+        log:
+            "output/logs/{sample}.rmdup.log"
+        params:
+            refflat = config["refflat"]
+        run:
+            if config["type"] == "paired":
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools dedup --stdin={input} --log={log} --paired --unmapped-reads=use > {output}")
                 else:
-                    # mapped with pair, unique locations
-                    shell("samtools view -bh -F 4 -F 256 {input} > \
-                        output/bam/{wildcards.sample}_filtered.bam")
-                    shell("samtools sort -O BAM -o {output.bam} \
-                        output/bam/{wildcards.sample}_filtered.bam")
-                    shell("rm output/bam/{wildcards.sample}_filtered.bam")
-                if config["keep_unfiltered_bam"] == "FALSE":
-                    shell("rm output/bam/{wildcards.sample}.bam \
-                        output/bam/{wildcards.sample}.bam.bai")
+                    # shell("samtools markdup -r {input} {output} 2> {log}")
+                    shell("picard MarkDuplicates REMOVE_DUPLICATES=true I={input} O={output} \
+                        M=output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
 
-        # Remove duplicate reads from ChIP-seq samples
-        rule sortedbam_to_rmdup:
-            input:
-                sorted_bam = "output/bam/{sample}.sorted.bam"
-            output:
-                dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
-            log:
-                "output/logs/{sample}.rmdup.log"
-            run:
-                shell("samtools rmdup {input.sorted_bam} {output.dup_removed} \
-                    2> {log}")
-                if config["keep_unfiltered_bam"] == "FALSE":
-                    shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")
-
-    elif config["experiment"] == "rnaseq" and config["type"] == "paired":
-        # Remove duplicate reads from paired-end RNA-seq samples
-        rule sortedbam_to_rmdup:
-            input:
-                "output/bam/{sample}.bam"
-            output:
-                "output/bam/{sample}.sorted.rmdup.bam"
-            log:
-                "output/logs/{sample}.rmdup.log"
-            run:
-                shell("samtools rmdup {input} {output} 2> {log}")
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")
-
-    elif config["experiment"] == "rnaseq" and config["type"] == "single":
-        # Sort reads from single-end RNA-seq samples
-        rule sortedbam_to_rmdup:
-            input:
-                "output/bam/{sample}.bam"
-            output:
-                "output/bam/{sample}.sorted.bam"
-            log:
-                "output/logs/{sample}.rmdup.log"
-            run:
-                shell("cp {input} {output}")
+                ## Rule for calculating insert size for PE sequencing
+                shell("picard CollectInsertSizeMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
+                    H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
+                    M=0.05")
+                if config["refflat"] != "FALSE":
+                    shell("picard CollectRnaSeqMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.rmdup.bam \
+                    O=output/logs/{wildcards.sample}.RNA_Metrics \
+                    REF_FLAT={params.refflat} \
+                    STRAND=SECOND_READ_TRANSCRIPTION_STRAND")
+            else:
+                if config["use_UMI"] == "TRUE":
+                    shell("umi_tools dedup --stdin={input} --log={log} > {output}")
+                else:
+                    shell("cp {input} {output}")
                 if config["keep_unfiltered_bam"] == "FALSE":
                     shell("rm -f {input} {input}.bai")
+                if config["refflat"] != "FALSE":
+                    shell("picard CollectRnaSeqMetrics \
+                    I=output/bam/{wildcards.sample}.sorted.bam \
+                    O=output/logs/{wildcards.sample}.RNA_Metrics \
+                    REF_FLAT={params.refflat} \
+                    STRAND=FIRST_READ_TRANSCRIPTION_STRAND")
 
 # Additional rules for ChIP-seq
 # Create TDF files
 rule rmdup_to_tdf:
     input:
-        dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
+        "output/bam/{sample}.unique.sorted.rmdup.bam"
     params:
         chr_sizes = config["chr_sizes"]
     output:
@@ -570,29 +493,29 @@ rule rmdup_to_tdf:
     log:
         "output/logs/{sample}.tdf.log"
     shell:
-        "igvtools count {input.dup_removed} {output.tdf} {params.chr_sizes} "
+        "igvtools count {input} {output.tdf} {params.chr_sizes} "
         "2> {log}"
 
 # Eliminate extraneous chromosomes from bam file
 rule rmdup_to_chrbam:
     input:
-        dup_removed = "output/bam/{sample}.unique.sorted.rmdup.bam"
+        "output/bam/{sample}.unique.sorted.rmdup.bam"
     output:
         chrbam = "output/bam/{sample}.unique.sorted.rmdup.chr.bam",
         chrbambai = "output/bam/{sample}.unique.sorted.rmdup.chr.bam.bai"
     log:
         "output/logs/{sample}.chrbam.log"
     run:
-        shell("samtools view -H {input.dup_removed} | \
+        shell("samtools view -H {input} | \
             sed -e \"s/SN:\([0-9XY]\)/SN:chr\\1/\" -e \"s/SN:MT/SN:chrM/\" | \
-            samtools reheader - {input.dup_removed} > {output.chrbam}")
+            samtools reheader - {input} > {output.chrbam}")
         shell("samtools index {output.chrbam}")
 
 # Create bigwig from bam file (main chromosomes only)
 rule chrbam_to_bw:
     input:
-        chrbam = "output/bam/{sample}.unique.sorted.rmdup.chr.bam",
-        chrbambai = "output/bam/{sample}.unique.sorted.rmdup.chr.bam.bai"
+        chrbam = rules.rmdup_to_chrbam.output.chrbam,
+        chrbambai = rules.rmdup_to_chrbam.output.chrbambai
     output:
         bw_file = "output/bw/{sample}.unique.sorted.rmdup.chr.bw"
     log:
@@ -612,73 +535,167 @@ rule chrbam_to_bed:
     shell:
         "bedtools bamtobed -i {input.chrbam} > {output.bed} 2> {log}"
 
+## Additional rules for RNA-seq
 # Create counts files for RNA-seq
 rule sortedbam_to_counts:
     input:
-        sorted_bam = "output/bam/{sample}.sorted.bam" if config[
-            "type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
+        sorted_bam = "output/bam/{sample}.sorted.bam" if config["type"] == "single" else "output/bam/{sample}.sorted.rmdup.bam"
     output:
-        counts = "output/counts/{sample}.counts.txt"
+        gene_counts = "output/counts/{sample}.gene.counts.txt",
+        exon_counts = "output/counts/{sample}.exon.counts.txt"
     params:
-        gtf = config["gtf"],
-        gene_scheme = config["gene_scheme"]
+        gtf = config["gtf"]
     log:
         "output/logs/{sample}.feature_counts.log"
     run:
-        if config["count_scheme"] == "fraction" and config["type"] == "paired":
-            shell("featureCounts -p -O --fraction -t {params.gene_scheme} \
-                -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
-        elif config["count_scheme"] == "fraction" and config["type"] == "single":
-            shell("featureCounts -O --fraction -t {params.gene_scheme} \
-                -a {params.gtf} -o {output.counts} {input.sorted_bam} 2> {log}")
-        elif config["count_scheme"] == "count_all" and config["type"] == "paired":
-            shell("featureCounts -p -O -t {params.gene_scheme} -a {params.gtf} \
-                -o {output.counts} {input.sorted_bam} 2> {log}")
-        elif config["count_scheme"] == "count_all" and config["type"] == "single":
-            shell("featureCounts -O -t {params.gene_scheme} -a {params.gtf} \
-                -o {output.counts} {input.sorted_bam} 2> {log}")
-        elif config["count_scheme"] == "count_uniq" and config["type"] == "paired":
-            shell("featureCounts -p -t {params.gene_scheme} -a {params.gtf} \
-                -o {output.counts} {input.sorted_bam} 2> {log}")
-        elif config["count_scheme"] == "count_uniq" and config["type"] == "single":
-            shell("featureCounts -t {params.gene_scheme} -a {params.gtf} \
-                -o {output.counts} {input.sorted_bam} 2> {log}")
+        if config["count_scheme"] == "fraction":
+            if config["type"] == "paired":
+                shell("featureCounts -p -O --fraction  -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -O --fraction  -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
+            if config["type"] == "single":
+                shell("featureCounts -O --fraction -t gene \
+                    -a {params.gtf} -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -O --fraction -t exon \
+                    -a {params.gtf} -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
+        elif config["count_scheme"] == "all_reads":
+            if config["type"] == "paired":
+                shell("featureCounts -p -O -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -O -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
+            if config["type"] == "single":
+                shell("featureCounts -O -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -O -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
+        elif config["count_scheme"] == "unique_reads":
+            if config["type"] == "paired":
+                shell("featureCounts -p -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -p -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
+            if config["type"] == "single":
+                shell("featureCounts -t gene -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.gene.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.gene.feature_counts.log")
+                shell("featureCounts -t exon -a {params.gtf} \
+                    -o output/counts/{wildcards.sample}.exon.counts.txt \
+                    {input.sorted_bam} 2> output/logs/{wildcards.sample}.exon.feature_counts.log")
 
 # Compile counts for RNA-seq
 rule counts_matrix:
     input:
-        counts = expand("output/counts/{sample}.counts.txt", 
-                        sample=SAMPLES)
+        gene_counts = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES),
+        exon_counts = expand("output/counts/{sample}.exon.counts.txt", sample=SAMPLES)
     output:
-        matrix = "output/counts_matrix.txt"
-    log:
-        "output/logs/counts_matrix.log"
-    params:
-        ngs_path = config["ngs_path"]
+        gene_matrix = "output/counts_genic_matrix.txt",
+        exon_matrix = "output/counts_exonic_matrix.txt"
     run:
-        shell("python {params.ngs_path}/ngs_helper/generate_counts_matrix.py {output.matrix} {input.counts}")
+        import pandas as pd
+        import platform
 
-# Create multiqc report for RNA-seq
-if config["experiment"] == "rnaseq":
-    rule run_multiqc:
-        input:
-            matrix = "output/counts_matrix.txt"
-        output:
-            multiqc_report = "output/multiqc_report.html"
-        params:
-            multiqc_config = config["multiqc_yaml"]
-        shell:
-            "multiqc . -f --config {params.multiqc_config}"
+        ## Process the genic counts
+        dict_of_counts = {}
+        for file in input.gene_counts:
+            sample = file.split(".")[0]
+            if platform.system() != 'Windows':
+                sample = sample.split("/")[2]
+            else:
+                sample = sample.split("\\")[2]
+            
+            dict_of_counts[sample] = {}
+            with open(file, "r") as infile:
+                next(infile)
+                next(infile)
+                for lines in infile:
+                    lines = lines.strip().split("\t")
+                    dict_of_counts[sample][lines[0]] = int(float(lines[-1]))
 
-# Create multiqc report for ChIP-seq and Cut&Run samples
-elif config["experiment"] == "chipseq" or config["experiment"] == "cutrun":
-    rule run_multiqc:
-        input:
-            chrbam = expand(
-                "output/bam/{sample}.unique.sorted.rmdup.chr.bam", sample=SAMPLES)
-        output:
-            multiqc_report = "output/multiqc_report.html"
-        params:
-            multiqc_config = config["multiqc_yaml"]
-        shell:
-            "multiqc . -f --config {params.multiqc_config}"
+        dataframe = pd.DataFrame(dict_of_counts)
+        dataframe.to_csv(output[0], sep='\t')
+
+        ## Process the exonic counts
+        dict_of_counts = {}
+        for file in input.exon_counts:
+            sample = file.split(".")[0]
+            if platform.system() != 'Windows':
+                sample = sample.split("/")[2]
+            else:
+                sample = sample.split("\\")[2]
+            
+            dict_of_counts[sample] = {}
+            with open(file, "r") as infile:
+                next(infile)
+                next(infile)
+                for lines in infile:
+                    lines = lines.strip().split("\t")
+                    dict_of_counts[sample][lines[0]] = int(float(lines[-1]))
+
+        dataframe = pd.DataFrame(dict_of_counts)
+        dataframe.to_csv(output[1], sep='\t')
+
+rule fpkm_matrix:
+    input:
+        gene_counts = "output/counts_genic_matrix.txt",
+        exon_counts = "output/counts_exonic_matrix.txt",
+        length = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES)
+    output:
+        gene_fpkm = "output/fpkm_genic_matrix.txt",
+        exon_fpkm = "output/fpkm_exonic_matrix.txt"
+    run:
+        import pandas as pd
+        counts = pd.read_csv(input.gene_counts, sep='\t')
+        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        counts.sort_values('Unnamed: 0',axis=0,inplace=True)
+        gl.sort_values('Geneid',axis=0,inplace=True)
+
+        if gl.iloc[:,0].tolist()==counts.iloc[:,0].tolist():
+            genelength = gl["Length"].values/1000
+            counts_rev = counts.drop("Unnamed: 0", axis=1).copy() # remove identifier column
+            colsum = counts_rev.copy().sum()/(10**6) # Sum count columns
+            rpkm = counts_rev.divide(genelength,axis=0).divide(colsum,axis=1)
+            dataframe = pd.concat([gl.iloc[:,0],rpkm],axis=1)
+            dataframe.to_csv(output.gene_fpkm, index=False, sep='\t')
+        else:
+            print("Gene IDs not identically aligned\nFPKM cannot be generated.")
+
+        counts = pd.read_csv(input.exon_counts, sep='\t')
+        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        counts.sort_values('Unnamed: 0',axis=0,inplace=True)
+        gl.sort_values('Geneid',axis=0,inplace=True)
+
+        if gl.iloc[:,0].tolist()==counts.iloc[:,0].tolist():
+            genelength = gl["Length"].values/1000
+            counts_rev = counts.drop("Unnamed: 0", axis=1).copy() # remove identifier column
+            colsum = counts_rev.copy().sum()/(10**6) # Sum count columns
+            rpkm = counts_rev.divide(genelength,axis=0).divide(colsum,axis=1)
+            dataframe = pd.concat([gl.iloc[:,0],rpkm],axis=1)
+            dataframe.to_csv(output.exon_fpkm, index=False, sep='\t')
+        else:
+            print("Gene IDs not identically aligned\nFPKM cannot be generated.")
+
+# Create multiqc report (used for all workflows) 
+rule run_multiqc:
+    input:
+        "output/fpkm_genic_matrix.txt" if config["experiment"] == "rnaseq" else \
+        expand("output/bam/{sample}.unique.sorted.rmdup.chr.bam", sample=SAMPLES)
+    output:
+        multiqc_report = "output/multiqc_report.html"
+    params:
+        multiqc_config = os.path.join(expand("{param}", param=config["ngs_path"])[0],"multiqc_config_template.yaml")
+    shell:
+        "multiqc . -f --outdir ./ --config {params.multiqc_config}"
+
+
