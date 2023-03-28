@@ -418,10 +418,12 @@ if config["experiment"] != "rnaseq" :
         log:
             "output/logs/{sample}.rmdup.log"
         run:
-            # shell("samtools markdup -r {input.sorted_bam} {output.dup_removed} 2> {log}")
-            shell("picard MarkDuplicates --REMOVE_DUPLICATES true -I {input.sorted_bam} -O {output.dup_removed} \
-                -M output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
-
+            if config["experiment"] == "cutrun" :
+                shell("picard MarkDuplicates --REMOVE_DUPLICATES true -I {input.sorted_bam} -O {output.dup_removed} \
+                    -M output/logs/{wildcards.sample}_marked_dup_metrics.txt -VALIDATION_STRINGENCY SILENT 2> {log}")
+            if config["experiment"] == "chipseq" :
+                shell("picard MarkDuplicates --REMOVE_DUPLICATES true -I {input.sorted_bam} -O {output.dup_removed} \
+                    -M output/logs/{wildcards.sample}_marked_dup_metrics.txt 2> {log}")
             if config["keep_unfiltered_bam"] == "FALSE":
                 shell("rm -f {input.sorted_bam} {input.sorted_bam}.bai")
             ## Rule for calculating insert size for PE sequencing
@@ -430,7 +432,7 @@ if config["experiment"] != "rnaseq" :
                     I=output/bam/{wildcards.sample}.unique.sorted.rmdup.bam \
                     O=output/logs/{wildcards.sample}_insert_size_metrics.txt \
                     H=output/logs/{wildcards.sample}_insert_size_histogram.pdf \
-                    M=0.05")
+                    M=0.05 VALIDATION_STRINGENCY=SILENT")
 
 
 # Remove and sort the multimapped reads from RNA-seq samples
