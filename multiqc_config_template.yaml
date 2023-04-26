@@ -63,6 +63,24 @@ fn_ignore_dirs:
 fn_ignore_paths:
     - '*/path/to/*_files/'
 
+module_order:
+  - featureCounts:
+      name: "Featurecounts; Exonic assignment"
+      anchor: "featurecounts_exonic"
+      info: "Featurecounts mode: Assignment to exons"
+      path_filters:
+        - '*.exon.counts.txt.summary'
+  - featureCounts:
+      name: "Featurecounts; Genic assignment"
+      anchor: "featurecounts_genic"
+      info: "Featurecounts mode: Assignment to full gene length"
+      path_filters:
+        - '*.gene.counts.txt.summary'
+
+report_section_order:
+  featurecounts_exonic:
+    before: featurecounts_genic
+
 # Ignore files larger than this when searching for logs (bytes)
 log_filesize_limit: 5000000
 
@@ -92,7 +110,6 @@ sp:
         fn: '*Log.final.out'
     trimmomatic:
         contents: 'Trimmomatic'
-
 
 # Specify a custom logo to add to reports (uncomment to use)
 custom_logo: null         # '/home/ramaka02/resources/5775936.png'

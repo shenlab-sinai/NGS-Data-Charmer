@@ -2,7 +2,7 @@
     "__default__" :
     {
         "queue"     : "premium",
-        "allocation": "acc_Nestlerlab",
+        "allocation": "acc_yourlab",
         "tasks"        : 1,
         "memory"    : 12000,
         "resources" : "\"rusage[mem=12000] span[hosts=1]\"",
@@ -17,7 +17,7 @@
         "walltime"    : "10:00"
     },
 
-    "fastq_to_bam" :
+    "fastq_to_bam_HISAT" :
     {
         "memory"    : 24000,
         "walltime"    : "10:00"
@@ -65,40 +65,14 @@
         "walltime" : "00:10"
     },
 
+    "fpkm_matrix":
+    {
+        "walltime" : "00:30"
+    },
+
     "run_multiqc":
     {
         "walltime" : "00:10"
-    },
-    
-    "split_length_long":
-    {
-        "walltime"    : "08:00"
-    },
-
-    "split_length_short":
-    {
-        "walltime"    : "08:00"
-    },
-
-    "trim_long":
-    {
-        "walltime"    : "08:00"
-    },
-
-    "combine_split_lengths":
-    {
-        "memory"    : 24000,
-        "walltime"    : "2:00"
-    },
-
-    "bowtie2":
-    {
-        "walltime"    : "08:00"
-    },
-
-    "rmdup":
-    {
-        "walltime"    : "03:00"
     }
 
 }

@@ -1,38 +1,42 @@
 # REQUIRED ARGUMENTS -
 type: "paired" # single or paired
-
 experiment: "chipseq" # chipseq or rnaseq or cutrun
-
 threads_for_alignment: 4 # May be increased to speed up alignment
-
-index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
-
-multiqc_yaml: "/path/to/Tools/NGS-Data-Charmer/multiqc_config_template.yaml" # example file provided in NGS-Data-Charmer folder
-
+hisat2_index: "/path/to/hisat_genome/mm10/genome" # path to basename of HISAT2 index
 ngs_path: "/path/to/Tools/NGS-Data-Charmer" # location of NGS-Data-Charmer folder
+trim_polyA: "FALSE" # Set to TRUE if RNAseq reads should be undergo trimming for polyA tails.
+use_very_sensitive: "FALSE" ## Set to TRUE if alignment step should use the "very sensitive" option.
+##Note: Setting "use_very_sensitive" parameter to "TRUE" may cause alignments to take a long time, adjust cluster.json walltime as needed.
 
+# Use of UMI -
+## Note: The use of UMI for deduplication is currently only implemented for RNAseq modes. Thus, the specification of
+## chipseq or cutrun modes will not take advantage of the UMI barcodes for de-duplication purposes. This is
+## due to the current predominant use of UMI identifiers on RNAseq, and may be updated for broader functionality in the future.
+use_UMI: "FALSE" ##Set to "TRUE" if you wish to use umitools for umi extraction and de-duplication.
+UMI_read1_pattern: "X"
+## Even if your UMI is present only on read2, you still need to set a pattern value for "UMI_read1_pattern".
+## This requirement is due to umitools expecting at least some input for the read1 pattern.
+## Set "UMI_read1_pattern" to the value "X" if your UMI pattern is on read2.
+## This will cause it to look for, then ignore, the first 5' base on read1.
+UMI_read2_pattern: "NNNNNNNN"
+## See https://umi-tools.readthedocs.io/en/latest/ for informaton on "umi_tools extract" parameters
 
 # FOR CUT&RUN AND CHIPSEQ -
 chr_sizes: "/path/to/mm10/mm10.chrom.sizes" # path to chrom.sizes file (only for chipseq)
-# This file must named as follows "<genomeid>.chrom.sizes", any other filename format (e.g. "mm10_chr_len") will 
+# This file must named as follows "<genomeid>.chrom.sizes", any other filename format (e.g. "mm10_chr_len") will
 # cause the TDF step to produce an empty TDF. Please see the Broad website for more information:
 # http://software.broadinstitute.org/software/igv/chromSizes
 
-
-# ONLY FOR CUT&RUN -
-bowtie2_index: "/path/to/Bowtie2Index/genome" # path to basename of bowtie2 index
-
-
 # ONLY FOR RNASEQ -
-gtf: "/path/to/gencode.vM22.annotation.gtf"
-count_scheme: "fraction" # fraction or count_all or count_uniq
-gene_scheme: "gene"  # gene or exon or transcript
+gtf: "/path/to/gencode.vM25.annotation.gtf"
+count_scheme: "fraction" # fraction or all_reads or unique_reads
+refflat: "/path/to/gencode.vM25.annotation.refflat" ## Set to "FALSE" if picard CollectRnaSeqMetrics is undesired.
+## Note: refflat files can be generated from GTF files using the UCSC utility "gtfToGenePred"
 
-
-# OUTPUT OPTIONS
+# OUTPUT options 
 keep_fastq: "FALSE"  # Independent of the other "stopping point" rules; trimmed fastq files are kept.
 keep_unfiltered_bam: "FALSE" # Keep the unfiltered bam file (contains unmapped reads and duplicates)
-to_tdf: "TRUE" # Produce TDF files
+to_tdf: "FALSE" # Produce TDF files
 to_bed: "TRUE" # Produce bed files
 to_bw: "TRUE" # Produce bigwig of reads from main chromsomes
 to_multiqc: "TRUE" # Run entire pipeline and create multiqc report
