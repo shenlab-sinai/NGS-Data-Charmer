@@ -118,6 +118,8 @@ custom_logo_title: null   # 'Our Institute Name'
 subtitle: null            # Grey text below title
 intro_text: null          # Set to False to remove, or your own text
 
+        
+
 # Add generic information to the top of reports
 report_header_info:
     - Want to know more?: 'See the <a href="http://multiqc.info/docs" target="_blank">MultiQC docs</a>'
@@ -128,4 +130,14 @@ table_columns_visible:
         percent_fails: False
         total_sequences: True
 
-
+table_columns_name:
+    Featurecounts; Exonic assignment:
+        percent_assigned: "% Assigned Exonic"
+        Assigned: "M Assigned Exonic"
+    Featurecounts; Genic assignment:
+        percent_assigned: "% Assigned Genic"
+        Assigned: "M Assigned Genic"
+    FastQC:
+        percent_duplicates: "% Dups FastQC"
+    Picard:
+        PERCENT_DUPLICATION: "% Dups Picard"
