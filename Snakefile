@@ -630,14 +630,15 @@ rule fpkm_matrix:
     input:
         gene_counts = "output/counts_genic_matrix.txt",
         exon_counts = "output/counts_exonic_matrix.txt",
-        length = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES)
+        length_gene = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES),
+        length_exon = expand("output/counts/{sample}.gene.counts.txt", sample=SAMPLES)
     output:
         gene_fpkm = "output/fpkm_genic_matrix.txt",
         exon_fpkm = "output/fpkm_exonic_matrix.txt"
     run:
         import pandas as pd
         counts = pd.read_csv(input.gene_counts, sep='\t')
-        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        gl = pd.read_csv(input.length_gene[0], comment='#', header=0, sep='\t')
         counts.sort_values('Unnamed: 0',axis=0,inplace=True)
         gl.sort_values('Geneid',axis=0,inplace=True)
 
@@ -652,7 +653,7 @@ rule fpkm_matrix:
             print("Gene IDs not identically aligned\nFPKM cannot be generated.")
 
         counts = pd.read_csv(input.exon_counts, sep='\t')
-        gl = pd.read_csv(input.length[0], comment='#', header=0, sep='\t')
+        gl = pd.read_csv(input.length_exon[0], comment='#', header=0, sep='\t')
         counts.sort_values('Unnamed: 0',axis=0,inplace=True)
         gl.sort_values('Geneid',axis=0,inplace=True)
 
