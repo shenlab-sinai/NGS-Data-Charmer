@@ -3,7 +3,7 @@
 This repository hosts an automated NGS data analysis pipeline (ChIP-seq, Iso-seq and RNA-seq) created using Snakemake. 
 
 ## Dependency:
-- [Anaconda](https://conda.io/docs/user-guide/install/linux.html) 
+- [Anaconda](https://www.anaconda.com/) 
 
 ## Installation:
 Clone this repository and change into the cloned NGS-Data-Charmer directory. 
